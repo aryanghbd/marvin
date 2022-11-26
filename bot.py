@@ -39,6 +39,37 @@ async def test(ctx):
     print("test of test")
     await ctx.channel.send("test")
 
+
+@client.command()
+async def emergency(ctx):
+
+    region = None
+    hotlines = {}
+
+
+
+    european_role = discord.utils.get(ctx.guild.roles, name = "Europe")
+    na_role = discord.utils.get(ctx.guild.roles, name = "Noth America")
+    asia_role = discord.utils.get(ctx.guild.roles, name = "Asia")
+    await ctx.channel.send("Remember, you are loved. The following numbers have been pooled for your region, all numbers are free of charge to use. Many of these services operate on a 24/7 basis unless stated otherwise. It is urgently recommended that in the event of a medical emergency to call your national emergency service number immediately, be aware that certain services may intervene and contact emergency services if you are in immediate medical danger.")
+
+    if european_role in ctx.author.roles:
+        region = "Europe"
+        hotlines = ["Samaritans: 116 123 by Phone (UK)", "National Suicide Prevention Helpline UK: 0800 689 5652 by Phone", "France: National Suicide Hotline - 3114 by Phone", "Germany: 116 123 for German Samaritans", "Spain: Suicide Crisis Line - 024 by Phone"]
+
+    elif na_role in ctx.author.roles:
+        region = "North America"
+        hotlines = ["US: 211 for emergency referrals to social services", "US: 988 Suicide and Crisis hotline, 24/7", "US: Crisis intervention text-service - text 'HOME' to 741 741", "Canada: Crisis Text Line - HOME (for English services), PARLER (for French services) to 686868", "Canada: Talk Suicide Canada - 45645 (24/7) service"]
+
+    elif asia_role in ctx.author.roles:
+        region = "Asia"
+        hotlines = ["China: Beijing Suicide Research and Prevention Center: 800-810-1117, available 24/7", "China: Lifeline China 400-821-1215", "Hong Kong: Samaritans HK: 2896 0000.", "Korea: Lifeline Korea - 1588-9191", "Malaysia: MIASA - 1-800-820066", "Philipines: National Center for Mental Health 24/7 Crisis Hotline: (02) 7989-USAP (8727) or 0917 899 USAP (8727)"]
+
+    em = discord.Embed(title="Emergency Hotlines for " + region, color=discord.Color.from_rgb(30, 74, 213))
+    em.add_field(name="Question: ", value=hotlines)
+    await ctx.channel.send(embed=em)
+
+
 @client.command()
 async def toggle_poof_xenophobia(ctx):
     global filimemeo
