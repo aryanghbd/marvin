@@ -2,10 +2,16 @@ import asyncio
 import random
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord import Intents
+import requests
+from requests.auth import HTTPBasicAuth
+
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.G2tyzb.9-_Dh8HC2QapyTV15A-ZkNxxqVq9UKO6fpDys8"
 
+headers = {'Accept': 'application/json'}
+auth = HTTPBasicAuth('apikey', '0WFG_xWfBhcTawJFiLVm5AeF')
+quoteurl = "https://quotes.rest/qod"
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
 filimemeo = False
@@ -34,6 +40,22 @@ async def on_message(message):
         await client.process_commands(message)
 
 
+
+# @tasks.loop(hours=24)
+# async def quote_of_the_day():
+#     quoteChannel = client.get_channel(1041717466633605130)
+#     response = requests.get("https://quotes.rest/qod").json()
+#     quote = response['quotes']['quote']
+#     print(quote)
+
+
+@tasks.loop(hours = 2)
+async def regular_riddle():
+    riddleChannel = client.get_channel(1041718370564849775)
+    response = requests.get("https://riddles-api.vercel.app/random").json()
+    await client.get_user(623602247921565747).send(response['answer'])
+    await riddleChannel.send(response['riddle'])
+
 @client.command()
 async def test(ctx):
     print("test of test")
@@ -41,12 +63,21 @@ async def test(ctx):
 
 
 @client.command()
+async def getQuote(ctx):
+    response = requests.get(quoteurl, headers=headers, auth=auth).json()
+    print(response)
+
+# @client.command()
+# async def getRiddle(ctx):
+#     response = requests.get("https://riddles-api.vercel.app/random").json()
+#     await client.get_user(623602247921565747).send(response['answer'])
+#     print(response['riddle'])
+
+@client.command()
 async def emergency(ctx):
 
     region = None
     hotlines = {}
-
-
 
     european_role = discord.utils.get(ctx.guild.roles, name = "Europe")
     na_role = discord.utils.get(ctx.guild.roles, name = "Noth America")
@@ -158,7 +189,14 @@ async def applycouncillor(ctx):
 
     in_prog = False
 
+@regular_riddle.before_loop
+async def before():
+    await client.wait_until_ready()
+    print("Finished waiting")
 
+async def main():
+    async with client:
+        regular_riddle.start()
+        await client.start(TOKEN)
 
-
-client.run(TOKEN)
+asyncio.run(main())
