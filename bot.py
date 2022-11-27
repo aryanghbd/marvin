@@ -28,6 +28,7 @@ async def on_ready():
     print('connected to discord!')
     channel = client.get_channel(1045823574084169738)
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
+    await regular_riddle.start()
 
 @client.event
 async def on_message(message):
@@ -194,9 +195,4 @@ async def before():
     await client.wait_until_ready()
     print("Finished waiting")
 
-async def main():
-    async with client:
-        regular_riddle.start()
-        await client.start(TOKEN)
-
-asyncio.run(main())
+client.run(TOKEN)
