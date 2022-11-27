@@ -9,9 +9,6 @@ from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.G2tyzb.9-_Dh8HC2QapyTV15A-ZkNxxqVq9UKO6fpDys8"
 
-headers = {'Accept': 'application/json'}
-auth = HTTPBasicAuth('apikey', '0WFG_xWfBhcTawJFiLVm5AeF')
-quoteurl = "https://quotes.rest/qod"
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
 filimemeo = False
@@ -42,12 +39,11 @@ async def on_message(message):
 
 
 
-# @tasks.loop(hours=24)
-# async def quote_of_the_day():
-#     quoteChannel = client.get_channel(1041717466633605130)
-#     response = requests.get("https://quotes.rest/qod").json()
-#     quote = response['quotes']['quote']
-#     print(quote)
+@tasks.loop(hours=24)
+async def quote_of_the_day():
+    quoteChannel = client.get_channel(1041717466633605130)
+    response = requests.get("https://zenquotes.io/api/quotes/").json()
+    await quoteChannel.send(response[0]['q'])
 
 
 @tasks.loop(hours = 2)
@@ -63,10 +59,10 @@ async def test(ctx):
     await ctx.channel.send("test")
 
 
-@client.command()
-async def getQuote(ctx):
-    response = requests.get(quoteurl, headers=headers, auth=auth).json()
-    print(response)
+# @client.command()
+# async def getQuote(ctx):
+#     response = requests.get("https://zenquotes.io/api/quotes/").json()
+#     print(response[0]['q'])
 
 # @client.command()
 # async def getRiddle(ctx):
@@ -194,5 +190,10 @@ async def applycouncillor(ctx):
 async def before():
     await client.wait_until_ready()
     print("Finished waiting")
+
+@quote_of_the_day.before_loop
+async def before():
+    await client.wait_until_ready()
+    print("Quote ready")
 
 client.run(TOKEN)
