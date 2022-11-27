@@ -26,7 +26,7 @@ async def on_ready():
     channel = client.get_channel(1045823574084169738)
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await regular_riddle.start()
-    await quote_of_the_day()
+    await quote_of_the_day.start()
 
 @client.event
 async def on_message(message):
