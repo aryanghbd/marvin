@@ -62,6 +62,9 @@ async def test(ctx):
     print("test of test")
     await ctx.channel.send("test")
 
+@client.command()
+async def smokedickclown(ctx):
+    await ctx.send("Translator: I have a difficult relationship with my father")
 
 # @client.command()
 # async def getQuote(ctx):
@@ -100,6 +103,7 @@ async def emergency(ctx):
     em = discord.Embed(title="Emergency Hotlines for " + region, color=discord.Color.from_rgb(30, 74, 213))
     em.add_field(name="Question: ", value=hotlines)
     await ctx.channel.send(embed=em)
+    await ctx.send("If you do not see an applicable phoneline in the provided list, consult findahelpline.com, findhelp.org for services specific to your area")
 
 
 @client.command()
