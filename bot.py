@@ -103,7 +103,7 @@ async def emergency(ctx):
     em = discord.Embed(title="Emergency Hotlines for " + region, color=discord.Color.from_rgb(30, 74, 213))
     em.add_field(name="Question: ", value=hotlines)
     await ctx.channel.send(embed=em)
-    await ctx.send("If you do not see an applicable phoneline in the provided list, consult findahelpline.com, findhelp.org for services specific to your area")
+    await ctx.channel.send("If you do not see an applicable phoneline in the provided list, consult findahelpline.com, findhelp.org for services specific to your area")
 
 
 @client.command()
