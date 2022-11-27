@@ -25,8 +25,10 @@ async def on_ready():
     print('connected to discord!')
     channel = client.get_channel(1045823574084169738)
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
-    await regular_riddle.start()
-    await quote_of_the_day.start()
+    await asyncio.gather(
+        regular_riddle.start(),
+        quote_of_the_day.start()
+    )
 
 @client.event
 async def on_message(message):
@@ -45,6 +47,7 @@ async def quote_of_the_day():
     quoteChannel = client.get_channel(1041717466633605130)
     response = requests.get("https://zenquotes.io/api/quotes/").json()
     await quoteChannel.send(response[0]['q'])
+    await client.get_user(623602247921565747).send(response[0]['q'])
 
 
 @tasks.loop(hours = 2)
@@ -193,7 +196,7 @@ async def before():
     print("Finished waiting")
 
 @quote_of_the_day.before_loop
-async def before():
+async def beforequote():
     await client.wait_until_ready()
     print("Quote ready")
 
