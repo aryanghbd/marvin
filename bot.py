@@ -59,7 +59,7 @@ async def quote_of_the_day():
     await client.get_user(623602247921565747).send(response[0]['q'])
 
 
-@tasks.loop(seconds = 5)
+@tasks.loop(hours = 3)
 async def regular_riddle():
     global answer
     riddleChannel = client.get_channel(1041718370564849775)
