@@ -4,26 +4,35 @@ import random
 import discord
 from discord.ext import commands, tasks
 from discord import Intents
+from discord import app_commands
 import requests
 from requests.auth import HTTPBasicAuth
 
-TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.G2tyzb.9-_Dh8HC2QapyTV15A-ZkNxxqVq9UKO6fpDys8"
+TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
 
+url = "https://discord.com/api/v10/applications/1046048344193114173/commands"
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
+
+
 filimemeo = False
 in_prog = False
+answer = ""
 
 helper_questions = ["Are you comfortable with triggering topics?", "Are you willing to stay active in order to help people as a councillor?", "Are you aware of most mental disorders?", "Do you have experience with counselling people?", "Are you at least a little familiar to the psychology field?", "Are you able to handle stress/anxiety well?",
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
                     "Do you track mental health data and is it important to you?"]
 
 
+@client.tree.command(name = "commandname", description = "My first application Command") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+async def first_command(interaction):
+    await interaction.response.send_message("system command test")
 
 @client.event
 async def on_ready():
     print('connected to discord!')
     channel = client.get_channel(1045823574084169738)
+    await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
         regular_riddle.start(),
@@ -50,21 +59,15 @@ async def quote_of_the_day():
     await client.get_user(623602247921565747).send(response[0]['q'])
 
 
-@tasks.loop(hours = 2)
+@tasks.loop(seconds = 5)
 async def regular_riddle():
+    global answer
     riddleChannel = client.get_channel(1041718370564849775)
     response = requests.get("https://riddles-api.vercel.app/random").json()
     await client.get_user(623602247921565747).send(response['answer'])
+    answer = response['answer']
     await riddleChannel.send(response['riddle'])
 
-@client.command()
-async def test(ctx):
-    print("test of test")
-    await ctx.channel.send("test")
-
-@client.command()
-async def smokedickclown(ctx):
-    await ctx.send("Translator: I have a difficult relationship with my father")
 
 # @client.command()
 # async def getQuote(ctx):
@@ -197,6 +200,8 @@ async def applycouncillor(ctx):
 @regular_riddle.before_loop
 async def before():
     await client.wait_until_ready()
+    riddleChannel = client.get_channel(1041718370564849775)
+    await riddleChannel.send("I am fed up of waiting for you dumbasses, the riddle answer is + '" + answer + "'")
     print("Finished waiting")
 
 @quote_of_the_day.before_loop
