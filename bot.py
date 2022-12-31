@@ -28,6 +28,10 @@ helper_questions = ["Are you comfortable with triggering topics?", "Are you will
 async def first_command(interaction):
     await interaction.response.send_message("system command test")
 
+@client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+async def riddleanswer(interaction):
+    await interaction.response.send_message("Damn you must suck at riddles, L bozo. The answer to the current riddle is: " + answer)
+
 @client.event
 async def on_ready():
     print('connected to discord!')
@@ -201,7 +205,7 @@ async def applycouncillor(ctx):
 async def before():
     await client.wait_until_ready()
     riddleChannel = client.get_channel(1041718370564849775)
-    await riddleChannel.send("I am fed up of waiting for you dumbasses, the riddle answer is + '" + answer + "'")
+    ##await riddleChannel.send("I am fed up of waiting for you dumbasses, the riddle answer is + '" + answer + "'")
     print("Finished waiting")
 
 @quote_of_the_day.before_loop
