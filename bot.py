@@ -131,16 +131,16 @@ async def regular_riddle():
     await riddleChannel.send(response['riddle'])
 
 
-# @client.command()
-# async def getQuote(ctx):
-#     response = requests.get("https://zenquotes.io/api/quotes/").json()
-#     print(response[0]['q'])
+@client.command()
+async def getQuote(ctx):
+    response = requests.get("https://zenquotes.io/api/quotes/").json()
+    print(response[0]['q'])
 
-# @client.command()
-# async def getRiddle(ctx):
-#     response = requests.get("https://riddles-api.vercel.app/random").json()
-#     await client.get_user(623602247921565747).send(response['answer'])
-#     print(response['riddle'])
+@client.command()
+async def getRiddle(ctx):
+    response = requests.get("https://riddles-api.vercel.app/random").json()
+    await client.get_user(623602247921565747).send(response['answer'])
+    print(response['riddle'])
 
 @client.command()
 async def emergency(ctx):
