@@ -8,6 +8,8 @@ from discord import app_commands
 import requests
 import pymongo
 from pymongo import MongoClient
+import time
+import datetime
 from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
@@ -39,17 +41,54 @@ async def riddleanswer(interaction):
 
 @client.tree.command(name = "startsoberjourney", description = "Every journey begins with a single step")
 async def startSoberJourney(interaction, journey : str):
-    collection.insert_one({"_id" : interaction.user.id, "_journey" : journey})
+    collection.insert_one({"_id" : interaction.user.id, "_journey" : journey, "_since" : datetime.datetime.now()})
+    await interaction.response.send_message("Journey recorded! Good luck!")
+
 @client.tree.command(name = "viewsoberjourney", description = "Reflect on your progress so far")
 async def viewSoberJourney(interaction):
-    await interaction.response.send_message("")
+    try:
+        entry = collection.find_one({"_id" : interaction.user.id})
+        journey = entry.get("_journey")
+        journeyStart = entry.get("_since")
 
-@client.tree.command(name = "resetsoberjourney", description = "...")
+        diff = (datetime.datetime.now() - journeyStart)
+
+        minutes = diff.seconds/60
+        hours = diff.seconds / 3600
+        days = hours/24
+        years = days / 365
+
+        username = str(client.get_user(interaction.user.id))
+        message = "You have been clean from " + journey + " for %d days, %d hours and %d minutes now!" % (days, hours, minutes)
+
+        em = discord.Embed(title= username + "'s Sober Journey", color=discord.Color.from_rgb(30, 74, 213))
+        em.add_field(name="Streak Summary", value=message)
+
+        await interaction.response.send_message("Coming right up!")
+        await interaction.channel.send(embed=em)
+    except:
+        await interaction.response.send_message("You don't seem to have a goal recorded in our database. Please use '/startsoberjourney' to begin your streak!")
+
+
+@client.tree.command(name = "resetsoberjourney", description = "If you've relapsed, broke your streak or want to start your timer over on your sober streak.")
 #Reset time clean to 0
 async def resetSoberJourney(interaction):
-    await interaction.response.send_message("")
+    collection.update_one({"_id" : interaction.user.id}, {
+        "$set" : {"_since" : datetime.datetime.now()}
+    })
+    await interaction.response.send_message("Progress Reset. Remember, it doesn't matter how slowly you go as long as you don't stop!")
 
+@client.tree.command(name = "changesoberjourney", description = "Have a new goal? Change your path!")
+async def changeSoberJourney(interaction, journey : str):
+    collection.update_one({"_id" : interaction.user.id}, {
+        "$set" : {"_journey" : journey, "_since" : datetime.datetime.now()}
+    })
+    await interaction.response.send_message("Goal amended successfully. Good luck!")
 
+@client.tree.command(name = "deletesoberjourney", description = "Erase your sober journey from the database")
+async def deleteSoberJourney(interaction):
+    collection.delete_one({"_id" : interaction.user.id})
+    await interaction.response.send_message("Goal deleted successfully.")
 
 @client.event
 async def on_ready():
