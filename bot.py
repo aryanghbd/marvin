@@ -52,23 +52,22 @@ async def viewSoberJourney(interaction):
         journeyStart = entry.get("_since")
 
         diff = (datetime.datetime.now() - journeyStart)
-
-        minutes = diff.seconds/60
-        hours = diff.seconds / 3600
-        days = hours/24
-        years = days / 365
+        days = diff.days
+        weeks, rem = divmod(days, 7)
+        hours, remainder = divmod(diff.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
 
         username = str(client.get_user(interaction.user.id))
-        message = "You have been clean from " + journey + " for %d days, %d hours and %d minutes now!" % (days, hours, minutes)
+        message = "You have been clean from " + journey + " for %d weeks, %d days, %d hours and %d minutes now! Great job!" % (weeks, days, hours, minutes)
 
         em = discord.Embed(title= username + "'s Sober Journey", color=discord.Color.from_rgb(30, 74, 213))
         em.add_field(name="Streak Summary", value=message)
 
         await interaction.response.send_message("Coming right up!")
         await interaction.channel.send(embed=em)
-    except:
+    except Exception as e:
         await interaction.response.send_message("You don't seem to have a goal recorded in our database. Please use '/startsoberjourney' to begin your streak!")
-
+        print(str(e))
 
 @client.tree.command(name = "resetsoberjourney", description = "If you've relapsed, broke your streak or want to start your timer over on your sober streak.")
 #Reset time clean to 0
@@ -97,8 +96,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        ##regular_riddle.start(),
-        ##quote_of_the_day.start()
+        regular_riddle.start(),
+        quote_of_the_day.start()
     )
 
 @client.event
