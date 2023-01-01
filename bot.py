@@ -97,8 +97,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        ##regular_riddle.start(),
+        ##quote_of_the_day.start()
     )
 
 @client.event
