@@ -6,6 +6,8 @@ from discord.ext import commands, tasks
 from discord import Intents
 from discord import app_commands
 import requests
+import pymongo
+from pymongo import MongoClient
 from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
@@ -13,6 +15,9 @@ TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tb
 url = "https://discord.com/api/v10/applications/1046048344193114173/commands"
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
+cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongodb.net/test")
+db = cluster["UserData"]
+collection = db["SoberJournies"]
 
 
 filimemeo = False
@@ -32,6 +37,20 @@ async def first_command(interaction):
 async def riddleanswer(interaction):
     await interaction.response.send_message("Damn you must suck at riddles, L bozo. The answer to the current riddle is: " + answer)
 
+@client.tree.command(name = "startsoberjourney", description = "Every journey begins with a single step")
+async def startSoberJourney(interaction, journey : str):
+    collection.insert_one({"_id" : interaction.user.id, "_journey" : journey})
+@client.tree.command(name = "viewsoberjourney", description = "Reflect on your progress so far")
+async def viewSoberJourney(interaction):
+    await interaction.response.send_message("")
+
+@client.tree.command(name = "resetsoberjourney", description = "...")
+#Reset time clean to 0
+async def resetSoberJourney(interaction):
+    await interaction.response.send_message("")
+
+
+
 @client.event
 async def on_ready():
     print('connected to discord!')
@@ -39,8 +58,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        ##regular_riddle.start(),
+        ##quote_of_the_day.start()
     )
 
 @client.event
