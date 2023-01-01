@@ -104,6 +104,9 @@ async def on_ready():
 async def on_message(message):
     # //if "erika" in message.content:
     #     await message.channel.send("is a hot mommy")
+
+    if message.type == discord.MessageType.premium_guild_subscription:
+        await message.channel.send("New boost!!")
     if message.author.id == 906212102757294080 and filimemeo is True:
         await message.add_reaction('🇵🇭')
         await client.process_commands(message)
