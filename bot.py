@@ -50,7 +50,7 @@ helper_questions = ["Are you comfortable with triggering topics?", "Are you will
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
                     "Do you track mental health data and is it important to you?"]
 
-@client.tree.command(name = "gpttest", description="mind ur bizniz")
+@client.tree.command(name = "askgpt", description="mind ur bizniz")
 async def askgpt(interaction, question : str):
     resp = (generate_response(question))
     await interaction.response.send_message(str(resp))
