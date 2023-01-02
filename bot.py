@@ -53,7 +53,10 @@ helper_questions = ["Are you comfortable with triggering topics?", "Are you will
 @client.tree.command(name = "askgpt", description="Ask a question and get an AI response!")
 async def askgpt(interaction, question : str):
     resp = (generate_response(question))
-    await interaction.response.send_message(str(resp))
+    if substring in resp:
+        await interaction.response.send_message("You thought you were slick with that recursive loop, didn't you")
+    else:
+        await interaction.response.send_message(str(resp))
 
 
 @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
@@ -133,8 +136,11 @@ async def on_message(message):
         await message.add_reaction('🇵🇭')
         await client.process_commands(message)
     if substring in message.content:
-        botResp = generate_response(message.content)
-        await message.channel.send(botResp)
+        resp = generate_response(message.content)
+        if substring in resp:
+            await message.channel.send("You thought you were slick with that recursive loop, didn't you")
+        else:
+            await message.channel.send(str(resp))
     else:
         await client.process_commands(message)
 
