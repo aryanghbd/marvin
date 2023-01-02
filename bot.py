@@ -10,6 +10,7 @@ import pymongo
 from pymongo import MongoClient
 import time
 import datetime
+import openai
 from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
@@ -21,15 +22,38 @@ cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongod
 db = cluster["UserData"]
 collection = db["SoberJournies"]
 
+openai.api_key = "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"
 
 filimemeo = False
 in_prog = False
 answer = ""
+import openai
+
+openai.api_key = "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"
+
+substring = "-gpt"
+def generate_response(prompt):
+    completions = openai.Completion.create(
+        engine="text-davinci-002",
+        prompt=f"User: {prompt}\nChatGPT: ",
+        max_tokens=1024,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+
+    message = completions.choices[0].text
+    return message.strip()
+
 
 helper_questions = ["Are you comfortable with triggering topics?", "Are you willing to stay active in order to help people as a councillor?", "Are you aware of most mental disorders?", "Do you have experience with counselling people?", "Are you at least a little familiar to the psychology field?", "Are you able to handle stress/anxiety well?",
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
                     "Do you track mental health data and is it important to you?"]
 
+@client.tree.command(name = "gpttest", description="mind ur bizniz")
+async def askgpt(interaction, question : str):
+    resp = (generate_response(question))
+    await interaction.response.send_message(str(resp))
 
 @client.tree.command(name = "commandname", description = "My first application Command") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
 async def first_command(interaction):
@@ -96,8 +120,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        #regular_riddle.start(),
+        #quote_of_the_day.start()
     )
 
 @client.event
@@ -110,6 +134,9 @@ async def on_message(message):
     if message.author.id == 906212102757294080 and filimemeo is True:
         await message.add_reaction('🇵🇭')
         await client.process_commands(message)
+    if substring in message.content:
+        botResp = generate_response(message.content)
+        await message.channel.send(botResp)
     else:
         await client.process_commands(message)
 
