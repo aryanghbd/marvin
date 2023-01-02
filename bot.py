@@ -122,6 +122,7 @@ async def on_ready():
     await asyncio.gather(
         regular_riddle.start(),
         quote_of_the_day.start()
+        #Testoid
     )
 
 @client.event
