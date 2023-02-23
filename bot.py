@@ -57,6 +57,7 @@ async def askgpt(interaction, question : str):
         await interaction.response.send_message("You thought you were slick with that recursive loop, didn't you")
     else:
         await interaction.user.send(str(resp))
+        await interaction.response.send_message("Please check your DMs for a response to your anonymous question.")
 
 
 @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
