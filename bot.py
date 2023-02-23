@@ -50,14 +50,16 @@ helper_questions = ["Are you comfortable with triggering topics?", "Are you will
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
                     "Do you track mental health data and is it important to you?"]
 
+async def anonGPTresponse(question):
+    resp = (generate_response(question))
+    return resp
+
 @client.tree.command(name = "askgpt", description="Ask a question and get an AI response!")
 async def askgpt(interaction, question : str):
-    resp = (generate_response(question))
-    if substring in resp:
-        await interaction.response.send_message("You thought you were slick with that recursive loop, didn't you")
-    else:
-        await interaction.user.send(str(resp))
-        await interaction.response.send_message("Please check your DMs for a response to your anonymous question.")
+    await interaction.response.send_message("Working on it. Please check your DMs for a response to your anonymous question.")
+    response = await anonGPTresponse(question)
+    await interaction.user.send(str(response))
+
 
 
 @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
@@ -121,8 +123,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        # regular_riddle.start(),
+        # quote_of_the_day.start()
         #Testoid
     )
 
