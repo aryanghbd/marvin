@@ -56,7 +56,7 @@ async def askgpt(interaction, question : str):
     if substring in resp:
         await interaction.response.send_message("You thought you were slick with that recursive loop, didn't you")
     else:
-        await interaction.response.send_message(str(resp))
+        await interaction.user.send(str(resp))
 
 
 @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
@@ -120,8 +120,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        # regular_riddle.start(),
+        # quote_of_the_day.start()
         #Testoid
     )
 
