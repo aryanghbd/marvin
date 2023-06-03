@@ -11,6 +11,7 @@ from pymongo import MongoClient
 import time
 import datetime
 import openai
+from pymongo import errors
 from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
@@ -33,18 +34,28 @@ openai.api_key = "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"
 
 substring = "-gpt"
 def generate_response(prompt):
-    completions = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=f"User: {prompt}\nChatGPT: ",
+    completions = openai.ChatCompletion.create(
+        engine="gpt-3.5-turbo",
+        prompt=f"User: {prompt}\n   ChatGPT: ",
         max_tokens=1024,
         n=1,
         stop=None,
         temperature=0.5,
     )
+    
 
     message = completions.choices[0].text
     return message.strip()
 
+
+def generate_image(prompt):
+    response = openai.Image.create(
+        prompt=prompt,
+        n = 1,
+        size = "256x256",
+    )
+
+    return response["data"][0]["url"]
 
 helper_questions = ["Are you comfortable with triggering topics?", "Are you willing to stay active in order to help people as a councillor?", "Are you aware of most mental disorders?", "Do you have experience with counselling people?", "Are you at least a little familiar to the psychology field?", "Are you able to handle stress/anxiety well?",
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
@@ -54,10 +65,20 @@ async def anonGPTresponse(question):
     resp = (generate_response(question))
     return resp
 
+async def makeImage(question):
+    resp = generate_image(question)
+    return resp
+@client.tree.command(name = "makeaiart")
+async def dalle(interaction, question: str):
+    await interaction.response.send_message("Coming right up!")
+    response = await makeImage(question)
+    await interaction.channel.send(f"Alas, as requested: '{question}'")
+    await interaction.channel.send(response)
 @client.tree.command(name = "askgpt", description="Ask a question and get an AI response!")
 async def askgpt(interaction, question : str):
     await interaction.response.send_message("Working on it. Please check your DMs for a response to your anonymous question.")
     response = await anonGPTresponse(question)
+    print(response)
     await interaction.user.send(str(response))
 
 
@@ -68,8 +89,13 @@ async def riddleanswer(interaction):
 
 @client.tree.command(name = "startsoberjourney", description = "Every journey begins with a single step")
 async def startSoberJourney(interaction, journey : str):
-    collection.insert_one({"_id" : interaction.user.id, "_journey" : journey, "_since" : datetime.datetime.now()})
-    await interaction.response.send_message("Journey recorded! Good luck!")
+    try:
+        collection.insert_one({"_id" : interaction.user.id, "_journey" : journey, "_since" : datetime.datetime.now()})
+        await interaction.response.send_message("Journey recorded! Good luck!")
+    except pymongo.errors.DuplicateKeyError:
+        await interaction.response.send_message(
+            "You appear to already have a goal recorded in our database. Please delete your existing one before starting a new one.")
+
 
 @client.tree.command(name = "viewsoberjourney", description = "Reflect on your progress so far")
 async def viewSoberJourney(interaction):
@@ -92,6 +118,7 @@ async def viewSoberJourney(interaction):
 
         await interaction.response.send_message("Coming right up!")
         await interaction.channel.send(embed=em)
+
     except Exception as e:
         await interaction.response.send_message("You don't seem to have a goal recorded in our database. Please use '/startsoberjourney' to begin your streak!")
         print(str(e))
@@ -121,7 +148,7 @@ async def on_ready():
     print('connected to discord!')
     channel = client.get_channel(1045823574084169738)
     await client.tree.sync()
-    await channel.send("i am a bot and do not care for your emotions, erika is a hot mommy, test successful")
+    await channel.send("Test Mode toggled.")
     await asyncio.gather(
         regular_riddle.start(),
         quote_of_the_day.start()
