@@ -23,28 +23,27 @@ cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongod
 db = cluster["UserData"]
 collection = db["SoberJournies"]
 
-openai.api_key = "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"
 
 filimemeo = False
 in_prog = False
 answer = ""
 import openai
 
-openai.api_key = "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"
+openai.api_key = "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"
 
 substring = "-gpt"
 def generate_response(prompt):
-    completions = openai.ChatCompletion.create(
-        engine="gpt-3.5-turbo",
-        prompt=f"User: {prompt}\n   ChatGPT: ",
-        max_tokens=1024,
-        n=1,
-        stop=None,
-        temperature=0.5,
+    answer = openai.ChatCompletion.create(
+        model='gpt-3.5-turbo',
+        messages=[
+            {"role": "user", "content": f'{prompt}'}],
+        max_tokens=193,
+        temperature=0,
     )
     
 
-    message = completions.choices[0].text
+    message = answer['choices'][0]['message']['content']
+    print(message)
     return message.strip()
 
 
@@ -61,25 +60,54 @@ helper_questions = ["Are you comfortable with triggering topics?", "Are you will
                     "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
                     "Do you track mental health data and is it important to you?"]
 
-async def anonGPTresponse(question):
+async def FetchGPTResponse(question):
     resp = (generate_response(question))
     return resp
 
 async def makeImage(question):
     resp = generate_image(question)
     return resp
-@client.tree.command(name = "makeaiart")
+@client.tree.command(name = "makeaiart", description="Wield the power of AI and turn your imagination into a picture! Type in a prompt and see.")
 async def dalle(interaction, question: str):
     await interaction.response.send_message("Coming right up!")
     response = await makeImage(question)
     await interaction.channel.send(f"Alas, as requested: '{question}'")
     await interaction.channel.send(response)
-@client.tree.command(name = "askgpt", description="Ask a question and get an AI response!")
-async def askgpt(interaction, question : str):
-    await interaction.response.send_message("Working on it. Please check your DMs for a response to your anonymous question.")
-    response = await anonGPTresponse(question)
-    print(response)
+@client.tree.command(name = "askgptanon", description="Ask a question and get an AI response anonymously sent to your DM.")
+async def askgptanonymous (interaction, question : str):
+    await interaction.response.send_message("Working on it. Please check your DMs for a response to your anonymous question.", ephemeral=True)
+    response = await FetchGPTResponse(question)
+    await interaction.user.send(f"Response to question: '{question}'")
     await interaction.user.send(str(response))
+
+@client.tree.command(name= "anonymousvent", description="Want to get something off your chest, without your name showing up? Use this command.")
+async def anonvent (interaction, topic : str, vent: str):
+    ## Generate an embed
+    em = discord.Embed(title=topic, color=discord.Color.from_rgb(30, 74, 213))
+    em.add_field(name="Details:", value=vent)
+    anonChannel = client.get_channel(1041718629345001513)
+    await interaction.response.send_message("Thank you for submitting your vent, it takes a lot of strength to do that.", ephemeral=True)
+    await anonChannel.send(embed=em)
+
+@client.tree.command(name="help", description="Wanna know what you can do with the Therapy Corner bot? Use this.")
+async def help(interaction):
+    em = discord.Embed(title="Bot Manual", color=discord.Color.from_rgb(30, 74, 213))
+    em.add_field(name='\u200b', value="Hello! I am the bot that serves the Therapy Corner community. Feel free to familiarize yourself with some of my commands so that you can get the most out of your time here.", inline=False)
+    em.set_thumbnail(url="https://i.imgur.com/fr0tqjv.png")
+
+    cmds = []
+    for command in client.tree.walk_commands():
+        cmds.append(f"```/{command.name}```\n{command.description}\n")
+
+    em.add_field(name='Bot Commands:', value='\n'.join(cmds))
+
+    await interaction.response.send_message(embed=em, ephemeral=True)
+@client.tree.command(name = "askgpt", description="Ask a question and get an AI response, publicly sent.")
+async def askgpt (interaction, question : str):
+    await interaction.response.send_message("Working on it.")
+    response = await FetchGPTResponse(question)
+    await interaction.channel.send(f"Response to question: '{question}'")
+    await interaction.channel.send(str(response))
 
 
 
@@ -204,123 +232,6 @@ async def getRiddle(ctx):
     response = requests.get("https://riddles-api.vercel.app/random").json()
     await client.get_user(623602247921565747).send(response['answer'])
     print(response['riddle'])
-
-@client.command()
-async def emergency(ctx):
-
-    region = None
-    hotlines = {}
-
-    european_role = discord.utils.get(ctx.guild.roles, name = "Europe")
-    na_role = discord.utils.get(ctx.guild.roles, name = "Noth America")
-    asia_role = discord.utils.get(ctx.guild.roles, name = "Asia")
-    await ctx.channel.send("Remember, you are loved. The following numbers have been pooled for your region, all numbers are free of charge to use. Many of these services operate on a 24/7 basis unless stated otherwise. It is urgently recommended that in the event of a medical emergency to call your national emergency service number immediately, be aware that certain services may intervene and contact emergency services if you are in immediate medical danger.")
-
-    if european_role in ctx.author.roles:
-        region = "Europe"
-        hotlines = ["Samaritans: 116 123 by Phone (UK)", "National Suicide Prevention Helpline UK: 0800 689 5652 by Phone", "France: National Suicide Hotline - 3114 by Phone", "Germany: 116 123 for German Samaritans", "Spain: Suicide Crisis Line - 024 by Phone"]
-
-    elif na_role in ctx.author.roles:
-        region = "North America"
-        hotlines = ["US: 211 for emergency referrals to social services", "US: 988 Suicide and Crisis hotline, 24/7", "US: Crisis intervention text-service - text 'HOME' to 741 741", "Canada: Crisis Text Line - HOME (for English services), PARLER (for French services) to 686868", "Canada: Talk Suicide Canada - 45645 (24/7) service"]
-
-    elif asia_role in ctx.author.roles:
-        region = "Asia"
-        hotlines = ["China: Beijing Suicide Research and Prevention Center: 800-810-1117, available 24/7", "China: Lifeline China 400-821-1215", "Hong Kong: Samaritans HK: 2896 0000.", "Korea: Lifeline Korea - 1588-9191", "Malaysia: MIASA - 1-800-820066", "Philipines: National Center for Mental Health 24/7 Crisis Hotline: (02) 7989-USAP (8727) or 0917 899 USAP (8727)"]
-
-    em = discord.Embed(title="Emergency Hotlines for " + region, color=discord.Color.from_rgb(30, 74, 213))
-    em.add_field(name="Question: ", value=hotlines)
-    await ctx.channel.send(embed=em)
-    await ctx.channel.send("If you do not see an applicable phoneline in the provided list, consult findahelpline.com, findhelp.org for services specific to your area")
-
-
-@client.command()
-async def toggle_poof_xenophobia(ctx):
-    global filimemeo
-    if filimemeo is False and ctx.author.id == 623602247921565747 :
-        filimemeo = True
-        await ctx.send("Poof xenophobia set to ON")
-    else:
-        if ctx.author.id == 623602247921565747:
-            filimemeo = False
-            await ctx.send("I feel like a nice bot today, I will stop being xenophobic to Poof now")
-        else:
-            await ctx.send("Only my creator is allowed to use this command")
-
-@client.command()
-async def applycouncillor(ctx):
-
-    global in_prog
-    if in_prog is True:
-        await ctx.send("Please wait for the current councillor test to conclude")
-
-    else:
-        in_prog = True
-        em = discord.Embed(title="Your Councillor Application", color=discord.Color.from_rgb(30, 74, 213))
-        em.add_field(name="Councillor Test Information", value=ctx.author.name + ", thank you for considering joining the Councillor team! Please proceed to #councillor-test-" + ctx.author.name + " for an evaluation to see if you are a fit!")
-        await ctx.send(embed=em)
-
-        user = ctx.message.author
-        testrole = discord.utils.get(user.guild.roles, name="councillor test candidate")
-        await user.add_roles(testrole)
-
-        guild = ctx.message.guild
-        c = discord.utils.get(guild.categories, name = "councillors")
-        test_channel = await guild.create_text_channel('councillor test ' + ctx.author.name, category=c)
-
-        questionpool = random.sample(helper_questions, 5)
-        answers = 0
-
-        for question in questionpool:
-            em = discord.Embed(title="Helper Quiz", color=discord.Color.from_rgb(30, 74, 213))
-            em.add_field(name="Question: ", value=question)
-            msg = await test_channel.send(embed=em)
-            await msg.add_reaction('\u2705')
-            await msg.add_reaction('\u274c')
-
-            while True:
-                try:
-                    reaction = await client.wait_for("reaction_add", timeout=120)
-
-                    if str(reaction[0]) == '✅':
-                        print("test")
-
-                    answers = answers + 1 if str(reaction[0]) == '\u2705' else answers
-                    print(answers)
-                    print(reaction[0])
-                    print(reaction)
-
-                    break
-
-                except asyncio.TimeoutError:
-                    print("Too slow, loser")
-
-        if answers >= 3:
-            msg = await test_channel.send("Congratulations! You seem to display all the right characteristics to be a great councillor on our server, we have given you the Councillor role, remember that with great power comes with great responsibility! If you are ready to start helping, please react with a tick to this message to acknowledge that this role is dependent on consistently good positive server behaviour, and breaching such conditions is subject to you losing this role.")
-            await msg.add_reaction('\u2705')
-            while True:
-                try:
-                    reaction = await client.wait_for("reaction_add", timeout=120)
-
-                    if str(reaction[0]) == '\u2705':
-                        user = ctx.message.author
-                        role = discord.utils.get(user.guild.roles, name = "councillor")
-                        await user.add_roles(role)
-                        await user.remove_roles(testrole)
-                        await test_channel.delete()
-
-                    break
-
-                except asyncio.TimeoutError:
-                    print("Too slow, loser")
-
-        else:
-            await test_channel.send("You have the mental health knowledge of a self diagnoser")
-            await asyncio.wait(10)
-            await user.remove_roles(testrole)
-            test_channel.delete()
-
-    in_prog = False
 
 @regular_riddle.before_loop
 async def before():
