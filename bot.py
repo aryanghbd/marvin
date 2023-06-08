@@ -178,8 +178,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("Test Mode toggled.")
     await asyncio.gather(
-        # regular_riddle.start(),
-        # quote_of_the_day.start()
+        regular_riddle.start(),
+        quote_of_the_day.start()
         #Testoid
     )
 
