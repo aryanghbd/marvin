@@ -133,10 +133,10 @@ async def viewSoberJourney(interaction):
         journeyStart = entry.get("_since")
 
         diff = (datetime.datetime.now() - journeyStart)
-        days = diff.days
-        weeks, rem = divmod(days, 7)
+        total_days = diff.days
+        weeks, days = divmod(total_days, 7)
         hours, remainder = divmod(diff.seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
+        minutes, _ = divmod(remainder, 60)
 
         username = str(client.get_user(interaction.user.id))
         message = "You have been clean from " + journey + " for %d weeks, %d days, %d hours and %d minutes now! Great job!" % (weeks, days, hours, minutes)
@@ -178,8 +178,8 @@ async def on_ready():
     await client.tree.sync()
     await channel.send("Test Mode toggled.")
     await asyncio.gather(
-        regular_riddle.start(),
-        quote_of_the_day.start()
+        # regular_riddle.start(),
+        # quote_of_the_day.start()
         #Testoid
     )
 
