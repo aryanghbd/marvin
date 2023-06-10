@@ -40,7 +40,6 @@ def generate_response(prompt):
         max_tokens=193,
         temperature=0,
     )
-    
 
     message = answer['choices'][0]['message']['content']
     print(message)
@@ -67,6 +66,14 @@ async def FetchGPTResponse(question):
 async def makeImage(question):
     resp = generate_image(question)
     return resp
+
+@client.tree.command(name = "report", description="Need to quietly report something to a mod? Use this command to send a ticket to the mod team.")
+async def report(interaction, reason : str, details: str):
+    em = discord.Embed(title=f"Report sent from: {interaction.user.name} | Details: {reason}", color=discord.Color.from_rgb(30, 74, 213))
+    em.add_field(name="Further Information:", value=details)
+    ticChannel = client.get_channel(1117079087928836127)
+    await interaction.response.send_message("Thank you for submitting your report, a mod will look into the matter for you.", ephemeral=True)
+    await ticChannel.send(embed=em)
 @client.tree.command(name = "makeaiart", description="Wield the power of AI and turn your imagination into a picture! Type in a prompt and see.")
 async def dalle(interaction, question: str):
     await interaction.response.send_message("Coming right up!")
@@ -177,6 +184,7 @@ async def on_ready():
     channel = client.get_channel(1045823574084169738)
     await client.tree.sync()
     await channel.send("Test Mode toggled.")
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
         regular_riddle.start(),
         quote_of_the_day.start()
