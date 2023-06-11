@@ -9,9 +9,10 @@ import requests
 import pymongo
 from pymongo import MongoClient
 import time
-import datetime
+from datetime import datetime, timedelta
 import openai
 from pymongo import errors
+from discord import Interaction
 from requests.auth import HTTPBasicAuth
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
@@ -22,6 +23,7 @@ client = commands.Bot(command_prefix='$', intents = Intents.all())
 cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongodb.net/test")
 db = cluster["UserData"]
 collection = db["SoberJournies"]
+moodCollection = db["Moods"]
 
 
 filimemeo = False
@@ -55,9 +57,6 @@ def generate_image(prompt):
 
     return response["data"][0]["url"]
 
-helper_questions = ["Are you comfortable with triggering topics?", "Are you willing to stay active in order to help people as a councillor?", "Are you aware of most mental disorders?", "Do you have experience with counselling people?", "Are you at least a little familiar to the psychology field?", "Are you able to handle stress/anxiety well?",
-                    "Are you able to keep a positive mood at all times?", "Would you consider your feelings being more important than the person you are and will be helping?", "Do you know any methods to help people who have trauma?",
-                    "Do you track mental health data and is it important to you?"]
 
 async def FetchGPTResponse(question):
     resp = (generate_response(question))
@@ -66,6 +65,115 @@ async def FetchGPTResponse(question):
 async def makeImage(question):
     resp = generate_image(question)
     return resp
+
+
+'''
+    Checkups:
+        - Role that can be selected to be reminded
+        - At a certain point of the day (can be random or can be scheduled) - bot reminds users to check in
+        - Users can then use /checkup - ephermal copmmand that brings up list of emoji reacts, react is then used and sent to MongoDB:
+            -Keyed in under their user.ID, the subdocument will be the date
+            
+        - Users can then use /checkupchart - walk DB under their ID, tally up the emojis, organise into an embed.
+        
+        - Optional: Perhaps ChatGPT can give suggestions or affirmations.
+'''
+
+
+
+
+@client.tree.command(name = "checkupinfo", description="Wanna know how to track your mood during your time on Therapy Corner?")
+async def checkuphelp(interaction):
+    await interaction.response.send_message('''
+    
+    You can use the ```/checkup {MOOD}``` command once per day with the following selections:
+    <:1_EmojiGreat:1117161493482455100> <:1_EmojiGood:1117161482786975905> <:1_EmojiMeh:1117161472418644119> <:1_EmojiBad:1117161462364897390> <:1_EmojiTerrible:1117161452495704095>
+    Great | Good | Neutral | Bad | Terrible
+    
+    We also optionally @ you once daily at a random time to remind you if you like to stay accountable! 
+    
+    Over time, you can use the ```/checkupstats {MONTH, WEEK, ALL-TIME}``` to get your mood results in a chart format, out of the week, the month, or all-time.
+    
+    -Separate role to sign up 
+    ''', ephemeral=True)
+
+@client.tree.command(name = "checkup", description="How are you feeling today? Let's check up on you.")
+@app_commands.choices(mood = [
+    app_commands.Choice(name = 'Great', value = 1),
+    app_commands.Choice(name = 'Good', value = 2),
+    app_commands.Choice(name = 'Neutral', value = 3),
+    app_commands.Choice(name = 'Bad', value = 4),
+    app_commands.Choice(name = 'Terrible', value = 5)
+])
+async def checkup(interaction, mood : app_commands.Choice[int]):
+    today = str(datetime.now().date())
+    dailyMood = {"date": today, "mood": mood.name}
+
+    user = moodCollection.find_one({"_id": interaction.user.id})
+
+    if user is None:
+        # User not found, create a new document
+        moodCollection.insert_one({"_id": interaction.user.id, "moods": [dailyMood]})
+    else:
+        # User found, check if a mood document for today already exists
+        moods = user.get('moods', [])
+        for i, m in enumerate(moods):
+            if m['date'] == today:
+                # Found a mood document for today, remove it
+                moodCollection.update_one({"_id": interaction.user.id}, {"$pull": {"moods": {"date": today}}})
+                break
+        # Whether the mood document for today existed or not, push the new one
+        moodCollection.update_one({"_id": interaction.user.id}, {"$push": {"moods": dailyMood}})
+
+    await interaction.response.send_message("Thank you for checking up.", ephemeral=True)
+
+
+
+@client.tree.command(name= "checkupstats", description="Look back at how far you've come, generate a chart of your mood over time.")
+@app_commands.choices(time = [
+    app_commands.Choice(name = 'Last 7 Days', value = 1),
+    app_commands.Choice(name = 'Last 30 Days', value = 2),
+    app_commands.Choice(name = 'All-time', value = 3),
+])
+
+@app_commands.choices(privacy = [
+    app_commands.Choice(name = 'Public', value = 1),
+    app_commands.Choice(name = 'Private', value = 2),
+])
+
+async def checkupstats(interaction, privacy: app_commands.Choice[int], time : app_commands.Choice[int]):
+    user = moodCollection.find_one({"_id" : interaction.user.id})
+
+    emojis = {
+        'Great' : '<:1_EmojiGreat:1117161493482455100>',
+        'Good' : '<:1_EmojiGood:1117161482786975905>',
+        'Neutral' : '<:1_EmojiMeh:1117161472418644119>',
+        'Bad' : '<:1_EmojiBad:1117161462364897390>',
+        'Terrible' : '<:1_EmojiTerrible:1117161452495704095>'
+    }
+    if user is None:
+        await interaction.response.send_message("No mood data found for this user.", ephemeral=True)
+    else:
+        moods = user['moods']
+
+        if not isinstance(moods, list):
+            await interaction.response.send_message("Mood data is not in the expected format.", ephemeral=True)
+        else:
+            if time.name == 'Last 7 Days':
+                moods = [m for m in moods if datetime.strptime(m['date'], "%Y-%m-%d").date() >= datetime.now().date() - timedelta(days=7)]
+            elif time.name == 'Last 30 Days':
+                moods = [m for m in moods if datetime.strptime(m['date'], "%Y-%m-%d").date() >= datetime.now().date() - timedelta(days=30)]
+            # For 'All Time' no filtering is needed
+
+            mood_counts = {'Great' : 0, 'Good' : 0, 'Neutral' : 0, 'Bad' : 0, 'Terrible' : 0}
+            for mood in moods:
+                mood_counts[mood['mood']] += 1
+
+            details = "\n".join([f" {emojis[mood]} ({mood}): {count}" for mood, count in mood_counts.items()])
+            em = discord.Embed(title= f"{interaction.user.name}'s Mood Chart ({time.name})", color=discord.Color.from_rgb(30, 74, 213))
+            em.add_field(name="Details:", value=details)
+            await interaction.response.send_message(embed = em, ephemeral= (privacy.name == 'Private'))
+
 
 @client.tree.command(name = "report", description="Need to quietly report something to a mod? Use this command to send a ticket to the mod team.")
 async def report(interaction, reason : str, details: str):
@@ -187,9 +295,13 @@ async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
         regular_riddle.start(),
-        quote_of_the_day.start()
+        quote_of_the_day.start(),
+        checkupreminder.start()
         #Testoid
     )
+
+
+
 
 @client.event
 async def on_message(message):
@@ -212,6 +324,15 @@ async def on_message(message):
 
 
 
+@tasks.loop(hours = 24)
+async def checkupreminder():
+    channel = client.get_channel(1042415779393589268)
+    minTime = 1000
+    maxTime = 100000
+    await asyncio.sleep(random.randint(minTime, maxTime))
+    await channel.send('''<@&1117527753110065162>: Time for your daily check up! How are you feeling? Select from the following: 
+    <:1_EmojiGreat:1117161493482455100> <:1_EmojiGood:1117161482786975905> <:1_EmojiMeh:1117161472418644119> <:1_EmojiBad:1117161462364897390> <:1_EmojiTerrible:1117161452495704095>
+    Great | Good | Neutral | Bad | Terrible - Log it with ```/checkup {MOOD}```''')
 @tasks.loop(hours=24)
 async def quote_of_the_day():
     quoteChannel = client.get_channel(1041717466633605130)
