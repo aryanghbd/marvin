@@ -247,7 +247,7 @@ async def viewSoberJourney(interaction):
         journey = entry.get("_journey")
         journeyStart = entry.get("_since")
 
-        diff = (datetime.datetime.now() - journeyStart)
+        diff = (datetime.now() - journeyStart)
         total_days = diff.days
         weeks, days = divmod(total_days, 7)
         hours, remainder = divmod(diff.seconds, 3600)
@@ -270,14 +270,14 @@ async def viewSoberJourney(interaction):
 #Reset time clean to 0
 async def resetSoberJourney(interaction):
     collection.update_one({"_id" : interaction.user.id}, {
-        "$set" : {"_since" : datetime.datetime.now()}
+        "$set" : {"_since" : datetime.now()}
     })
     await interaction.response.send_message("Progress Reset. Remember, it doesn't matter how slowly you go as long as you don't stop!")
 
 @client.tree.command(name = "changesoberjourney", description = "Have a new goal? Change your path!")
 async def changeSoberJourney(interaction, journey : str):
     collection.update_one({"_id" : interaction.user.id}, {
-        "$set" : {"_journey" : journey, "_since" : datetime.datetime.now()}
+        "$set" : {"_journey" : journey, "_since" : datetime.now()}
     })
     await interaction.response.send_message("Goal amended successfully. Good luck!")
 
