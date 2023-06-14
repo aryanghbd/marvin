@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import Intents
 from discord import app_commands
+import typing
 import requests
 import pymongo
 from pymongo import MongoClient
@@ -14,6 +15,7 @@ import openai
 from pymongo import errors
 from discord import Interaction
 from requests.auth import HTTPBasicAuth
+from dateutil.parser import parse
 
 TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
 
@@ -24,9 +26,8 @@ cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongod
 db = cluster["UserData"]
 collection = db["SoberJournies"]
 moodCollection = db["Moods"]
+goalCollection = db["Goals"]
 
-
-filimemeo = False
 in_prog = False
 answer = ""
 import openai
@@ -67,6 +68,7 @@ async def makeImage(question):
     return resp
 
 
+
 '''
     Checkups:
         - Role that can be selected to be reminded
@@ -81,6 +83,122 @@ async def makeImage(question):
 
 
 
+
+'''
+    Goals:
+        -User puts in {GOAL}, {DUEBY} for their goal and due date/time
+        
+        -Bot will DM them periodically, to remind them.
+        
+        -Users can then 
+
+'''
+
+
+# A Context Menu command is an app command that can be run on a member or on a message by
+# accessing a menu within the client, usually via right clicking.
+# It always takes an interaction as its first parameter and a Member or Message as its second parameter.
+
+# This context menu command only works on members
+
+
+async def goal_autocompletion(
+        interaction: discord.Interaction,
+        current: str
+) -> typing.List[app_commands.Choice[str]]:
+    goalData = []
+    choices = []
+
+    user = goalCollection.find_one({"_id": interaction.user.id})
+
+    goals = user.get('goals', [])
+    for i, m in enumerate(goals):
+        goalData.append(app_commands.Choice(name=str(m['goal']), value=m['goal']))
+
+    return goalData
+
+
+
+'''
+    completegoal():
+        -Privacy to toggle displaying completion publicly or not.
+        
+'''
+
+@client.tree.command(name="deletegoal", description="Changed your mind on a goal? You can delete it with this.")
+@app_commands.choices(privacy = [
+    app_commands.Choice(name = 'Public', value = 1),
+    app_commands.Choice(name = 'Private', value = 2),
+])
+@app_commands.autocomplete(item=goal_autocompletion)
+async def deletegoal(interaction: discord.Interaction, item: str, privacy: app_commands.Choice[int]):
+    user = goalCollection.find_one({"_id": interaction.user.id})
+
+    goals = user.get('goals', [])
+    for i, m in enumerate(goals):
+        if m['goal'] == item:
+            # Found a mood document for today, remove it
+            goalCollection.update_one({"_id": interaction.user.id}, {"$pull": {"goals": {"goal": item}}})
+            break
+
+    if privacy.value == 1:
+        await interaction.response.send_message(f"Goal deleted. No worries, there's always another day!")
+    else:
+        await interaction.response.send_message(f"Goal deleted. No worries, there's always another day!", ephemeral=True)
+
+@client.tree.command(name="completegoal", description="Finished up on a goal? Go ahead and tick it off the list!")
+@app_commands.choices(privacy = [
+    app_commands.Choice(name = 'Public', value = 1),
+    app_commands.Choice(name = 'Private', value = 2),
+])
+@app_commands.autocomplete(item=goal_autocompletion)
+async def completegoal(interaction: discord.Interaction, item: str, privacy: app_commands.Choice[int]):
+
+    user = goalCollection.find_one({"_id": interaction.user.id})
+
+    goals = user.get('goals', [])
+    for i, m in enumerate(goals):
+        if m['goal'] == item:
+            # Found a mood document for today, remove it
+            goalCollection.update_one({"_id": interaction.user.id}, {"$pull": {"goals": {"goal": item}}})
+            break
+
+    if privacy.value == 1:
+        await interaction.response.send_message(f"Great job on finishing off your goal of {item} <a:pucksalute:1116178939002494976>. Everyone, go give <@{interaction.user.id}> a high five!")
+    else:
+        await interaction.response.send_message(f"Hey there, good job on finishing off on {item}, enjoy those endorphins from having accomplished something today!", ephemeral=True)
+
+@client.tree.command(name="setnewgoal", description="Feeling ambitious? Set a goal for a certain time!" )
+@app_commands.choices(privacy = [
+    app_commands.Choice(name = 'Public', value = 1),
+    app_commands.Choice(name = 'Private', value = 2),
+])
+@app_commands.choices(accountability = [
+    app_commands.Choice(name = 'DM me periodic reminders', value = 1),
+    app_commands.Choice(name = 'Don`t DM me periodic reminders', value = 2),
+])
+async def setgoal(interaction: discord.Interaction, goal : str, days : int, hours : int, minutes : int, privacy : app_commands.Choice[int], accountability : app_commands.Choice[int]):
+    date = datetime.now()
+
+    by = date + timedelta(days=days, hours=hours, minutes=minutes)
+    print(by)
+    timedGoal = {"goal" : goal, "by" : by, "accountable" : accountability.value}
+    user = goalCollection.find_one({"_id": interaction.user.id})
+
+    if user is None:
+        # User not found, create a new document
+        goalCollection.insert_one({"_id": interaction.user.id, "goals": [timedGoal]})
+    else:
+        # User found, add a new goal to the existing goals array
+        goalCollection.update_one({"_id": interaction.user.id}, {"$push": {"goals": timedGoal}})
+
+    await interaction.response.send_message(f"Just set your goal, <@{interaction.user.id}>, wishing you good luck on: {goal}", ephemeral=privacy.value == 2)
+
+
+# @client.tree.context_menu(name='Show Join Date')
+# async def show_join_date(interaction: discord.Interaction, member: discord.Member):
+#     # The format_dt function formats the date time into a human readable representation in the official client
+#     await interaction.response.send_message(f'{member} joined at {discord.utils.format_dt(member.joined_at)}')
 
 @client.tree.command(name = "checkupinfo", description="Wanna know how to track your mood during your time on Therapy Corner?")
 async def checkuphelp(interaction):
@@ -125,7 +243,7 @@ async def checkup(interaction, mood : app_commands.Choice[int]):
         # Whether the mood document for today existed or not, push the new one
         moodCollection.update_one({"_id": interaction.user.id}, {"$push": {"moods": dailyMood}})
 
-    await interaction.response.send_message("Thank you for checking up.", ephemeral=True)
+    await interaction.response.send_message("Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>", ephemeral=True)
 
 
 
@@ -152,12 +270,12 @@ async def checkupstats(interaction, privacy: app_commands.Choice[int], time : ap
         'Terrible' : '<:1_EmojiTerrible:1117161452495704095>'
     }
     if user is None:
-        await interaction.response.send_message("No mood data found for this user.", ephemeral=True)
+        await interaction.response.send_message("I've been trying to find your mood data, but it looks like you haven't given me any. Go ahead and give it a try now with /checkup !", ephemeral=True)
     else:
         moods = user['moods']
 
         if not isinstance(moods, list):
-            await interaction.response.send_message("Mood data is not in the expected format.", ephemeral=True)
+            await interaction.response.send_message("Uh oh, there was an unexpected error trying to format your mood data. You're going to have to bring this up with my creator (<@:922920299266179133>)", ephemeral=True)
         else:
             if time.name == 'Last 7 Days':
                 moods = [m for m in moods if datetime.strptime(m['date'], "%Y-%m-%d").date() >= datetime.now().date() - timedelta(days=7)]
@@ -180,7 +298,7 @@ async def report(interaction, reason : str, details: str):
     em = discord.Embed(title=f"Report sent from: {interaction.user.name} | Details: {reason}", color=discord.Color.from_rgb(30, 74, 213))
     em.add_field(name="Further Information:", value=details)
     ticChannel = client.get_channel(1117079087928836127)
-    await interaction.response.send_message("Thank you for submitting your report, a mod will look into the matter for you.", ephemeral=True)
+    await interaction.response.send_message("Thank you for submitting your report, let me pass this on to the mods, and they'll look into the matter for you.", ephemeral=True)
     await ticChannel.send(embed=em)
 @client.tree.command(name = "makeaiart", description="Wield the power of AI and turn your imagination into a picture! Type in a prompt and see.")
 async def dalle(interaction, question: str):
@@ -190,7 +308,7 @@ async def dalle(interaction, question: str):
     await interaction.channel.send(response)
 @client.tree.command(name = "askgptanon", description="Ask a question and get an AI response anonymously sent to your DM.")
 async def askgptanonymous (interaction, question : str):
-    await interaction.response.send_message("Working on it. Please check your DMs for a response to your anonymous question.", ephemeral=True)
+    await interaction.response.send_message("Coming right up! Let me think about it and then I'll DM you the answer.", ephemeral=True)
     response = await FetchGPTResponse(question)
     await interaction.user.send(f"Response to question: '{question}'")
     await interaction.user.send(str(response))
@@ -201,43 +319,57 @@ async def anonvent (interaction, topic : str, vent: str):
     em = discord.Embed(title=topic, color=discord.Color.from_rgb(30, 74, 213))
     em.add_field(name="Details:", value=vent)
     anonChannel = client.get_channel(1041718629345001513)
-    await interaction.response.send_message("Thank you for submitting your vent, it takes a lot of strength to do that.", ephemeral=True)
+    await interaction.response.send_message("Thank you for sharing that with me, hopefully you feel a bit better now you've got that off your chest. It takes a lot of strength to do that.", ephemeral=True)
     await anonChannel.send(embed=em)
 
+
+@app_commands.choices(page = [
+    app_commands.Choice(name = '1', value = 1),
+    app_commands.Choice(name = '2', value = 2),
+])
+
 @client.tree.command(name="help", description="Wanna know what you can do with the Therapy Corner bot? Use this.")
-async def help(interaction):
+async def help(interaction, page : app_commands.Choice[int]):
     em = discord.Embed(title="Bot Manual", color=discord.Color.from_rgb(30, 74, 213))
-    em.add_field(name='\u200b', value="Hello! I am the bot that serves the Therapy Corner community. Feel free to familiarize yourself with some of my commands so that you can get the most out of your time here.", inline=False)
+    em.add_field(name='\u200b', value="Hello! I'm Marvin! I'm the bot that serves the Therapy Corner community. Feel free to familiarize yourself with some of my commands so that you can get the most out of your time here.", inline=False)
     em.set_thumbnail(url="https://i.imgur.com/fr0tqjv.png")
 
     cmds = []
     for command in client.tree.walk_commands():
         cmds.append(f"```/{command.name}```\n{command.description}\n")
 
-    em.add_field(name='Bot Commands:', value='\n'.join(cmds))
+    half_index = len(cmds) // 2
+    cmds_first_half = cmds[:half_index]
+    cmds_second_half = cmds[half_index:]
+
+    if page.value == 1:
+
+        em.add_field(name='Marvin Commands (Page 1):', value='\n'.join(cmds_first_half))
+    else:
+        em.add_field(name='Marvin Commands (Page 2):', value='\n'.join(cmds_second_half))
 
     await interaction.response.send_message(embed=em, ephemeral=True)
 @client.tree.command(name = "askgpt", description="Ask a question and get an AI response, publicly sent.")
 async def askgpt (interaction, question : str):
-    await interaction.response.send_message("Working on it.")
+    await interaction.response.send_message("Let me have a think about that first...")
     response = await FetchGPTResponse(question)
-    await interaction.channel.send(f"Response to question: '{question}'")
+    await interaction.channel.send(f"Aha! I've got it, you wanted to ask: '{question}'")
     await interaction.channel.send(str(response))
 
 
 
 @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
 async def riddleanswer(interaction):
-    await interaction.response.send_message("Damn you must suck at riddles, L bozo. The answer to the current riddle is: " + answer)
+    await interaction.response.send_message("That one was a tough one! I'll give you the answer this time, its: " + answer + ". Better luck on the next riddle!")
 
 @client.tree.command(name = "startsoberjourney", description = "Every journey begins with a single step")
 async def startSoberJourney(interaction, journey : str):
     try:
-        collection.insert_one({"_id" : interaction.user.id, "_journey" : journey, "_since" : datetime.datetime.now()})
-        await interaction.response.send_message("Journey recorded! Good luck!")
+        collection.insert_one({"_id" : interaction.user.id, "_journey" : journey, "_since" : datetime.now()})
+        await interaction.response.send_message("I've recorded your journey in my system. I'm proud of you for starting, that's always the hardest step.")
     except pymongo.errors.DuplicateKeyError:
         await interaction.response.send_message(
-            "You appear to already have a goal recorded in our database. Please delete your existing one before starting a new one.")
+            "Uh oh, it seems you already gave me a journey, I can't juggle two at the same time! Please delete your existing one, and then let me know what your new one is.")
 
 
 @client.tree.command(name = "viewsoberjourney", description = "Reflect on your progress so far")
@@ -254,7 +386,7 @@ async def viewSoberJourney(interaction):
         minutes, _ = divmod(remainder, 60)
 
         username = str(client.get_user(interaction.user.id))
-        message = "You have been clean from " + journey + " for %d weeks, %d days, %d hours and %d minutes now! Great job!" % (weeks, days, hours, minutes)
+        message = ("<@" + str(interaction.user.id) + ">") + ", time to look back on your progress! You've been working hard, staying clean from " + journey + " for %d weeks, %d days, %d hours and %d minutes now! Great job!" % (weeks, days, hours, minutes)
 
         em = discord.Embed(title= username + "'s Sober Journey", color=discord.Color.from_rgb(30, 74, 213))
         em.add_field(name="Streak Summary", value=message)
@@ -263,7 +395,7 @@ async def viewSoberJourney(interaction):
         await interaction.channel.send(embed=em)
 
     except Exception as e:
-        await interaction.response.send_message("You don't seem to have a goal recorded in our database. Please use '/startsoberjourney' to begin your streak!")
+        await interaction.response.send_message("I'm sorry, it looks like you didn't give me a journey to track! Go ahead and use '/startsoberjourney' to begin your streak, I've got a sharp memory, I promise!")
         print(str(e))
 
 @client.tree.command(name = "resetsoberjourney", description = "If you've relapsed, broke your streak or want to start your timer over on your sober streak.")
@@ -272,7 +404,7 @@ async def resetSoberJourney(interaction):
     collection.update_one({"_id" : interaction.user.id}, {
         "$set" : {"_since" : datetime.now()}
     })
-    await interaction.response.send_message("Progress Reset. Remember, it doesn't matter how slowly you go as long as you don't stop!")
+    await interaction.response.send_message("Sorry to hear that you relapsed, I hope everything's alright. I've reset your streak. Remember, it doesn't matter how slowly you go as long as you don't stop!")
 
 @client.tree.command(name = "changesoberjourney", description = "Have a new goal? Change your path!")
 async def changeSoberJourney(interaction, journey : str):
@@ -284,7 +416,7 @@ async def changeSoberJourney(interaction, journey : str):
 @client.tree.command(name = "deletesoberjourney", description = "Erase your sober journey from the database")
 async def deleteSoberJourney(interaction):
     collection.delete_one({"_id" : interaction.user.id})
-    await interaction.response.send_message("Goal deleted successfully.")
+    await interaction.response.send_message("I cleared your journey from my database. Whatever your next journey is, I'll be there! <a:puckspin:1116178950956253264>")
 
 @client.event
 async def on_ready():
@@ -294,6 +426,7 @@ async def on_ready():
     await channel.send("Test Mode toggled.")
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
+        goalreminder.start(),
         regular_riddle.start(),
         quote_of_the_day.start(),
         checkupreminder.start()
@@ -309,19 +442,64 @@ async def on_message(message):
     #     await message.channel.send("is a hot mommy")
 
     if message.type == discord.MessageType.premium_guild_subscription:
-        await message.channel.send("New boost!!")
-    if message.author.id == 906212102757294080 and filimemeo is True:
-        await message.add_reaction('🇵🇭')
-        await client.process_commands(message)
-    if substring in message.content:
-        resp = generate_response(message.content)
-        if substring in resp:
-            await message.channel.send("You thought you were slick with that recursive loop, didn't you")
-        else:
-            await message.channel.send(str(resp))
+        # await message.channel.send("New boost!!")
+        ## Boost image?
+
+        '''
+            Booster Perk:
+                -Custom channel
+                -Access to ChatGPT-4 (role)
+        
+        '''
     else:
         await client.process_commands(message)
 
+
+@tasks.loop(seconds=1)
+async def goalreminder():
+
+    intervals = [
+        7 * 24 * 60 * 60,  # 7 days
+        3 * 24 * 60 * 60,  # 3 days
+        1 * 24 * 60 * 60,  # 1 day
+        12 * 60 * 60,  # 12 hours
+        6 * 60 * 60,  # 6 hours
+        3 * 60 * 60,  # 3 hours
+        1 * 60 * 60,  # 1 hour
+    ]
+
+    def format_interval(seconds):
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        days, hours = divmod(hours, 24)
+
+        result = ""
+
+        if days > 0:
+            result += f"{days} Day{'s' if days > 1 else ''} "
+        if hours > 0:
+            result += f"{hours} Hour{'s' if hours > 1 else ''} "
+        if minutes > 0:
+            result += f"{minutes} Minute{'s' if minutes > 1 else ''} "
+        return result.strip()
+
+    now = datetime.now()
+    users = goalCollection.find()
+
+    for user in users:
+        for goalData in user.get('goals', []):
+            due_by = goalData['by']
+
+            for interval in intervals:
+                interval_start = due_by - timedelta(seconds=interval)
+                interval_end = due_by - timedelta(seconds=interval) + timedelta(seconds=1)
+
+                if interval_start <= now <= interval_end:
+                    sendTo = await client.fetch_user(user['_id'])
+                    await sendTo.send(f"What's up, <@{sendTo.id}>, just letting you know your goal of {goalData['goal']} is due in {format_interval(interval)}, best of luck!")
+            if due_by <= now < due_by + timedelta(seconds=1) and goalData['accountable'] == 1:
+                sendTo = await client.fetch_user(user['_id'])
+                await sendTo.send(f"Hey there <@{sendTo.id}>, just wanted to check up on you and see if you were finishing up on {goalData['goal']}? The due date is right about now according to my calculations <:frogleafy:1116179012310540370>, no pressure if you haven't though! It's important to go at your own pace, so let me know whenever you're done. If you've already finished your goal, feel free to /completegoal it, otherwise if you've changed your mind you can /deletegoal!")
 
 
 @tasks.loop(hours = 24)
