@@ -16,13 +16,18 @@ from pymongo import errors
 from discord import Interaction
 from requests.auth import HTTPBasicAuth
 from dateutil.parser import parse
+import openai
+import os
+from dotenv import load_dotenv
 
-TOKEN = "MTA0NjA0ODM0NDE5MzExNDE3Mw.GOLvSP.gqnjFwo3wsUwgNaK_ptSO0fgNNt1Sz7NNH7Tbg"
+load_dotenv()
 
-url = "https://discord.com/api/v10/applications/1046048344193114173/commands"
+TOKEN = os.getenv('BOT_TOKEN')
+MONGO_URL = os.getenv('MONGO_URL')
+OPENAI_KEY = os.getenv('OPENAI_KEY')
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
-cluster = MongoClient("mongodb+srv://tcadmin:erikamommy123@cluster0.9wobd.mongodb.net/test")
+cluster = MongoClient(MONGO_URL)
 db = cluster["UserData"]
 collection = db["SoberJournies"]
 moodCollection = db["Moods"]
@@ -30,11 +35,6 @@ goalCollection = db["Goals"]
 
 in_prog = False
 answer = ""
-import openai
-
-openai.api_key = "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"
-
-substring = "-gpt"
 def generate_response(prompt):
     answer = openai.ChatCompletion.create(
         model='gpt-3.5-turbo',
@@ -181,18 +181,22 @@ async def setgoal(interaction: discord.Interaction, goal : str, days : int, hour
     date = datetime.now()
 
     by = date + timedelta(days=days, hours=hours, minutes=minutes)
-    print(by)
     timedGoal = {"goal" : goal, "by" : by, "accountable" : accountability.value}
+
     user = goalCollection.find_one({"_id": interaction.user.id})
 
     if user is None:
         # User not found, create a new document
         goalCollection.insert_one({"_id": interaction.user.id, "goals": [timedGoal]})
+        await interaction.response.send_message(f"Just set your goal, <@{interaction.user.id}>, wishing you good luck on: {goal}", ephemeral=privacy.value == 2)
     else:
-        # User found, add a new goal to the existing goals array
-        goalCollection.update_one({"_id": interaction.user.id}, {"$push": {"goals": timedGoal}})
-
-    await interaction.response.send_message(f"Just set your goal, <@{interaction.user.id}>, wishing you good luck on: {goal}", ephemeral=privacy.value == 2)
+        # User found
+        if len(user.get('goals', [])) >= 7:
+            await interaction.response.send_message(f"Sorry <@{interaction.user.id}>, looks like you've already got 7 active goals. I'm not a circus animal to be juggling all of those goals! Please complete or remove a goal before adding a new one.", ephemeral=True)
+        else:
+            # User has less than 7 goals, add a new goal to the existing goals array
+            goalCollection.update_one({"_id": interaction.user.id}, {"$push": {"goals": timedGoal}})
+            await interaction.response.send_message(f"Just set your goal, <@{interaction.user.id}>, wishing you good luck on: {goal}", ephemeral=privacy.value == 2)
 
 
 # @client.tree.context_menu(name='Show Join Date')
@@ -319,8 +323,12 @@ async def anonvent (interaction, topic : str, vent: str):
     em = discord.Embed(title=topic, color=discord.Color.from_rgb(30, 74, 213))
     em.add_field(name="Details:", value=vent)
     anonChannel = client.get_channel(1041718629345001513)
+    loggings = client.get_channel(1047579544497954967)
     await interaction.response.send_message("Thank you for sharing that with me, hopefully you feel a bit better now you've got that off your chest. It takes a lot of strength to do that.", ephemeral=True)
     await anonChannel.send(embed=em)
+
+    em.add_field(name="User: ", value = interaction.user.name)
+    await loggings.send(embed=em)
 
 
 @app_commands.choices(page = [
@@ -426,10 +434,10 @@ async def on_ready():
     await channel.send("Test Mode toggled.")
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
-        goalreminder.start(),
-        regular_riddle.start(),
-        quote_of_the_day.start(),
-        checkupreminder.start()
+        # goalreminder.start(),
+        # regular_riddle.start(),
+        # quote_of_the_day.start(),
+        # checkupreminder.start()
         #Testoid
     )
 
