@@ -434,10 +434,10 @@ async def on_ready():
     await channel.send("Test Mode toggled.")
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
-        # goalreminder.start(),
-        # regular_riddle.start(),
-        # quote_of_the_day.start(),
-        # checkupreminder.start()
+        goalreminder.start(),
+        regular_riddle.start(),
+        quote_of_the_day.start(),
+        checkupreminder.start()
         #Testoid
     )
 
