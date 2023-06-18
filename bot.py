@@ -533,6 +533,7 @@ async def regular_riddle():
     response = requests.get("https://riddles-api.vercel.app/random").json()
     await client.get_user(623602247921565747).send(response['answer'])
     answer = response['answer']
+    print(response['riddle'])
     await riddleChannel.send(response['riddle'])
 
 
