@@ -438,7 +438,6 @@ async def on_ready():
         regular_riddle.start(),
         quote_of_the_day.start(),
         checkupreminder.start()
-        #Testoid
     )
 
 
