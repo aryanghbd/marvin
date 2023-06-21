@@ -24,7 +24,7 @@ load_dotenv()
 
 TOKEN = os.getenv('BOT_TOKEN')
 MONGO_URL = os.getenv('MONGO_URL')
-OPENAI_KEY = os.getenv('OPENAI_KEY')
+openai.api_key = os.getenv('OPENAI_KEY')
 
 client = commands.Bot(command_prefix='$', intents = Intents.all())
 cluster = MongoClient(MONGO_URL)
@@ -448,18 +448,17 @@ async def on_message(message):
     # //if "erika" in message.content:
     #     await message.channel.send("is a hot mommy")
 
-    if message.type == discord.MessageType.premium_guild_subscription:
+    # if message.type == discord.MessageType.premium_guild_subscription:
         # await message.channel.send("New boost!!")
         ## Boost image?
 
-        '''
-            Booster Perk:
-                -Custom channel
-                -Access to ChatGPT-4 (role)
-        
-        '''
-    else:
-        await client.process_commands(message)
+    '''
+        Booster Perk:
+            -Custom channel
+            -Access to ChatGPT-4 (role)
+
+    '''
+    await client.process_commands(message)
 
 
 @tasks.loop(seconds=1)
