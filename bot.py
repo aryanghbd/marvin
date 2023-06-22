@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands, tasks
 from discord import Intents
 from discord import app_commands
+from discord.utils import get
 import typing
 import requests
 import pymongo
@@ -430,8 +431,6 @@ async def deleteSoberJourney(interaction):
 async def on_ready():
     print('connected to discord!')
     channel = client.get_channel(1045823574084169738)
-    await client.tree.sync()
-    await channel.send("Test Mode toggled.")
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
         goalreminder.start(),
@@ -441,6 +440,66 @@ async def on_ready():
     )
 
 
+@client.event
+async def on_raw_reaction_remove(payload):
+    channel = client.get_channel(1121336331675631687)
+    if payload.message_id == 1121504128435232789 and payload.user_id != 1121456578529349814:
+        guild = client.get_guild(payload.guild_id)
+        user = guild.get_member(payload.user_id)
+        msg = await channel.fetch_message(payload.message_id)
+        yellowrole = discord.utils.find(lambda r: r.name == 'Yellow', guild.roles)
+        limerole = discord.utils.find(lambda r: r.name == 'Lime', guild.roles)
+        cyanrole = discord.utils.find(lambda r: r.name == 'Cyan', guild.roles)
+        purplerole = discord.utils.find(lambda r: r.name == 'Purple', guild.roles)
+        deeppinkrole = discord.utils.find(lambda r: r.name == 'Deep Pink', guild.roles)
+        blackrole = discord.utils.find(lambda r: r.name == 'Black', guild.roles)
+
+        colourRoles = [yellowrole, limerole, cyanrole, purplerole, deeppinkrole, blackrole]
+
+        for role in colourRoles:
+            if role in user.roles:
+                await user.remove_roles(role)
+                break
+@client.event
+async def on_raw_reaction_add(payload):
+
+    print(payload.message_id)
+    channel = client.get_channel(1121336331675631687)
+    if payload.message_id == 1121504128435232789 and payload.member.id != 1121456578529349814:
+        msg = await channel.fetch_message(payload.message_id)
+        yellowrole = discord.utils.find(lambda r: r.name == 'Yellow', payload.member.guild.roles)
+        limerole = discord.utils.find(lambda r: r.name == 'Lime', payload.member.guild.roles)
+        cyanrole = discord.utils.find(lambda r: r.name == 'Cyan', payload.member.guild.roles)
+        purplerole = discord.utils.find(lambda r: r.name == 'Purple', payload.member.guild.roles)
+        deeppinkrole = discord.utils.find(lambda r: r.name == 'Deep Pink', payload.member.guild.roles)
+        blackrole = discord.utils.find(lambda r: r.name == 'Black', payload.member.guild.roles)
+
+        colourRoles = [yellowrole, limerole, cyanrole, purplerole, deeppinkrole, blackrole]
+
+        for role in colourRoles:
+            if role in payload.member.roles:
+                await payload.member.send(f"Hey there, <@{payload.member.id}>! As much as I appreciate your desire to become the human embodiment of a rainbow, I'm afraid you can only hold on to one coloured role at a time! Please remove your current role before adding a new one.")
+                await msg.remove_reaction(payload.emoji, payload.member)
+                return
+
+        if str(payload.emoji) == "🍋":
+            role = get(payload.member.guild.roles, id = 1121371179769413673)
+            await payload.member.add_roles(role)
+        elif str(payload.emoji) == "🥝":
+            role = get(payload.member.guild.roles, id = 1121370786754728028)
+            await payload.member.add_roles(role)
+        elif str(payload.emoji) == "🧊":
+            role = get(payload.member.guild.roles, id = 1121370664360738847)
+            await payload.member.add_roles(role)
+        elif str(payload.emoji) == "🍇":
+            role = get(payload.member.guild.roles, id = 1121370998575476777)
+            await payload.member.add_roles(role)
+        elif str(payload.emoji) == "🍒":
+            role = get(payload.member.guild.roles, id = 1121372437234331708)
+            await payload.member.add_roles(role)
+        elif str(payload.emoji) == "🎱":
+            role = get(payload.member.guild.roles, id = 1121372246657749073)
+            await payload.member.add_roles(role)
 
 
 @client.event
