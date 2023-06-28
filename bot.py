@@ -438,6 +438,7 @@ async def on_ready():
         quote_of_the_day.start(),
         checkupreminder.start()
     )
+    await client.tree.sync()
 
 
 @client.event
