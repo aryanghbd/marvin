@@ -305,13 +305,13 @@ async def report(interaction, reason : str, details: str):
     ticChannel = client.get_channel(1117079087928836127)
     await interaction.response.send_message("Thank you for submitting your report, let me pass this on to the mods, and they'll look into the matter for you.", ephemeral=True)
     await ticChannel.send(embed=em)
-@client.tree.command(name = "makeaiart", description="Wield the power of AI and turn your imagination into a picture! Type in a prompt and see.")
+@client.tree.command(name = "marvindraw", description="Marvin is a great artist, give him a prompt, and and turn your imagination into a picture!")
 async def dalle(interaction, question: str):
     await interaction.response.send_message("Coming right up!")
     response = await makeImage(question)
     await interaction.channel.send(f"Alas, as requested: '{question}'")
     await interaction.channel.send(response)
-@client.tree.command(name = "askgptanon", description="Ask a question and get an AI response anonymously sent to your DM.")
+@client.tree.command(name = "askmarvinanon", description="Whisper Marvin a question and get the response anonymously sent to your DM.")
 async def askgptanonymous (interaction, question : str):
     await interaction.response.send_message("Coming right up! Let me think about it and then I'll DM you the answer.", ephemeral=True)
     response = await FetchGPTResponse(question)
@@ -358,7 +358,7 @@ async def help(interaction, page : app_commands.Choice[int]):
         em.add_field(name='Marvin Commands (Page 2):', value='\n'.join(cmds_second_half))
 
     await interaction.response.send_message(embed=em, ephemeral=True)
-@client.tree.command(name = "askgpt", description="Ask a question and get an AI response, publicly sent.")
+@client.tree.command(name = "askmarvin", description="Ask Marvin a question and get an indepth response, publicly sent.")
 async def askgpt (interaction, question : str):
     await interaction.response.send_message("Let me have a think about that first...")
     response = await FetchGPTResponse(question)
