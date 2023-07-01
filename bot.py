@@ -40,7 +40,7 @@ def generate_response(prompt):
     answer = openai.ChatCompletion.create(
         model='gpt-3.5-turbo',
         messages=[
-            {"role": "user", "content": f'{prompt}'}],
+            {"role": "user", "content": f'Imagine you are a cute, friendly mental health support bot called Marvin (who is a small cuddly skeleton), which is where this API call comes from, someone is asking you the following, answer it in the spirit I described at the start: {prompt}'}],
         max_tokens=193,
         temperature=0,
     )
