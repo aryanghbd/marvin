@@ -515,6 +515,15 @@ async def deleteSoberJourney(interaction):
     collection.delete_one({"_id" : interaction.user.id})
     await interaction.response.send_message("I cleared your journey from my database. Whatever your next journey is, I'll be there! <a:puckspin:1116178950956253264>")
     ##
+
+
+@client.tree.command(name="synccommands", description="Owner-only")
+async def syncpls(interaction):
+    if interaction.user.id != 922920299266179133:
+        await interaction.response.send_message("This is an owner-only command, sorry.")
+
+    else:
+        await client.tree.sync()
 @client.tree.command(name = "postembed", description = "Staff feature to post embeds")
 async def postEmbed(interaction, colour : str, details : str, name : str = None, thumbnail : str = None, image : str = None):
     trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930, 724261185310163045, 705099363499769897]
