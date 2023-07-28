@@ -513,7 +513,7 @@ async def changeSoberJourney(interaction, journey : str):
 async def deleteSoberJourney(interaction):
     collection.delete_one({"_id" : interaction.user.id})
     await interaction.response.send_message("I cleared your journey from my database. Whatever your next journey is, I'll be there! <a:puckspin:1116178950956253264>")
-
+    ##
 @client.tree.command(name = "postembed", description = "Staff feature to post embeds")
 async def postEmbed(interaction, colour : str, name : str, details : str):
     try:
