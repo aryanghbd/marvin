@@ -548,10 +548,10 @@ async def on_ready():
     channel = client.get_channel(1045823574084169738)
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
-        # goalreminder.start(),
-        # regular_riddle.start(),
-        # quote_of_the_day.start(),
-        # checkupreminder.start()
+        goalreminder.start(),
+        regular_riddle.start(),
+        quote_of_the_day.start(),
+        checkupreminder.start()
     )
     await client.tree.sync()
 
