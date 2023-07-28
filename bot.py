@@ -263,82 +263,82 @@ async def checkup(interaction, mood : app_commands.Choice[int]):
     await interaction.response.send_message("Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>", ephemeral=True)
 
 
-# @client.tree.command(name="marvinmoodtunes", description="How are you feeling? Tell Marvin, and he'll spin you some songs to help you through it")
-# async def moodtunes(interaction, mood : str):
-#     trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930]
-#     discord.opus.load_opus("/usr/local/Cellar/opus/1.4/lib/libopus.0.dylib")
-#     if interaction.user.id not in trusted:
-#         await interaction.response.send_message("Sorry loser, this command is under construction")
-#     else:
-#         await interaction.response.send_message("Let's think of something to suit the mood..")
-#         prompt = (
-#             "I'm looking for a list of 10 songs to match a certain mood or to reflect someone's day. "
-#             "The mood/vent is: '{}'. "
-#             "Please provide the song titles only, without any additional text or explanation. "
-#             "For example: \n"
-#             "1. Song Title 1\n"
-#             "2. Song Title 2\n"
-#             "3. Song Title 3\n"
-#             "...\n"
-#             "10. Song Title 10"
-#         ).format(mood)
-#         ans = await FetchGPTResponse(prompt)
-#         q = ans.split('\n')
-#         await interaction.channel.send(ans)
-#
-#         vc = client.get_channel(1041794802557132921)
-#
-#         conn = await vc.connect()
-#
-#         await mp.setInteraction(interaction)
-#         await mp.setConnection(conn)
-#
-#         if conn:
-#             # Add the first song to the queue
-#             if q:
-#                 await mp.add_to_queue(q.pop(0))
-#
-#             # Add next few songs to the queue before starting the player
-#             for _ in range(min(2, len(q))):  # Add 2 songs, or whatever remains if less than 2
-#                 await mp.add_to_queue(q.pop(0))
-#
-#             # Start the player
-#             await mp.start()
-#
-#             # Schedule the task to add the remaining songs
-#             async def add_remaining_songs():
-#                 for song in q:
-#                     await mp.add_to_queue(song)
-#
-#             asyncio.create_task(add_remaining_songs())
-#
-#
-# @client.tree.command(name="queue", description="Check the current vent music queue")
-# async def dumpQueue(interaction):
-#     embed = discord.Embed(title="Song Queue")
-#
-#     # 'queue' is your deque object containing the songs
-#     description = ""
-#     for i, song in enumerate(mp.queue, start=1):
-#         url, title = song
-#         description += f"{i}. {title}\n"
-#
-#     embed.description = description
-#     await interaction.response.send_message(embed=embed)
-#
-# @client.tree.command(name="pausesong", description="test")
-# async def pausesong(interaction):
-#     await interaction.response.send_message("Pausing!")
-#     await mp.pause()
-#
-# @client.tree.command(name="resumesong", description="test")
-# async def unpausesong(interaction):
-#     await interaction.response.send_message("Resuming the tunes")
+@client.tree.command(name="marvinmoodtunes", description="How are you feeling? Tell Marvin, and he'll spin you some songs to help you through it")
+async def moodtunes(interaction, mood : str):
+    trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930]
+    discord.opus.load_opus("/usr/local/Cellar/opus/1.4/lib/libopus.0.dylib")
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("Sorry loser, this command is under construction")
+    else:
+        await interaction.response.send_message("Let's think of something to suit the mood..")
+        prompt = (
+            "I'm looking for a list of 10 songs to match a certain mood or to reflect someone's day. "
+            "The mood/vent is: '{}'. "
+            "Please provide the song titles only, without any additional text or explanation. "
+            "For example: \n"
+            "1. Song Title 1\n"
+            "2. Song Title 2\n"
+            "3. Song Title 3\n"
+            "...\n"
+            "10. Song Title 10"
+        ).format(mood)
+        ans = await FetchGPTResponse(prompt)
+        q = ans.split('\n')
+        await interaction.channel.send(ans)
+
+        vc = client.get_channel(1041794802557132921)
+
+        conn = await vc.connect()
+
+        await mp.setInteraction(interaction)
+        await mp.setConnection(conn)
+
+        if conn:
+            # Add the first song to the queue
+            if q:
+                await mp.add_to_queue(q.pop(0))
+
+            # Add next few songs to the queue before starting the player
+            for _ in range(min(2, len(q))):  # Add 2 songs, or whatever remains if less than 2
+                await mp.add_to_queue(q.pop(0))
+
+            # Start the player
+            await mp.start()
+
+            # Schedule the task to add the remaining songs
+            async def add_remaining_songs():
+                for song in q:
+                    await mp.add_to_queue(song)
+
+            asyncio.create_task(add_remaining_songs())
+
+
+@client.tree.command(name="queue", description="Check the current vent music queue")
+async def dumpQueue(interaction):
+    embed = discord.Embed(title="Song Queue")
+
+    # 'queue' is your deque object containing the songs
+    description = ""
+    for i, song in enumerate(mp.queue, start=1):
+        url, title = song
+        description += f"{i}. {title}\n"
+
+    embed.description = description
+    await interaction.response.send_message(embed=embed)
+
+@client.tree.command(name="pausesong", description="test")
+async def pausesong(interaction):
+    await interaction.response.send_message("Pausing!")
+    await mp.pause()
+
+@client.tree.command(name="resumesong", description="test")
+async def unpausesong(interaction):
+    await interaction.response.send_message("Resuming the tunes")
 #     await mp.unpause()
-# @client.tree.command(name="skipsong", description="Skip!")
-# async def skip(interaction):
-#     await interaction.response.send_message("Skipping this song!")
-#     mp.skipSong()
+@client.tree.command(name="skipsong", description="Skip!")
+async def skip(interaction):
+    await interaction.response.send_message("Skipping this song!")
+    mp.skipSong()
 @client.tree.command(name= "checkupstats", description="Look back at how far you've come, generate a chart of your mood over time.")
 @app_commands.choices(time = [
     app_commands.Choice(name = 'Last 7 Days', value = 1),
@@ -516,12 +516,33 @@ async def deleteSoberJourney(interaction):
     await interaction.response.send_message("I cleared your journey from my database. Whatever your next journey is, I'll be there! <a:puckspin:1116178950956253264>")
     ##
 @client.tree.command(name = "postembed", description = "Staff feature to post embeds")
-async def postEmbed(interaction, colour : str, name : str, details : str):
+async def postEmbed(interaction, colour : str, details : str, name : str = None, thumbnail : str = None, image : str = None):
+    trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930, 724261185310163045, 705099363499769897]
+    if interaction.user.id not in trusted:
+        interaction.response.send_message("Sorry, this command is for staff members only, git gud.")
     try:
         r, g, b = map(int, colour.split(','))
-        emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
-        emb.add_field(name="", value=details)
-        await interaction.response.send_message("Serving up your embed right now!", ephemeral = True)
+
+        if name is None:
+            emb = discord.Embed(title=" ", color=discord.Color.from_rgb(r, g, b))
+        else:
+            emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
+
+        if thumbnail:
+            try:
+                emb.set_thumbnail(url = thumbnail)
+            except discord.app_commands.errors.CommandInvokeError:
+                interaction.response.send_message("Whoops! Looks like the url you provided was not well formed. Double check the link and try again")
+
+        if image:
+            try:
+                emb.set_image(url = image)
+            except discord.app_commands.errors.CommandInvokeError:
+                interaction.response.send_message("Whoops! Looks like the url you provided was not well formed. Double check the link and try again")
+        paragraphs = details.split('@@')
+        # Join the paragraphs with line breaks to set as the embed's description
+        emb.description = "\n\n".join(paragraphs)
+        await interaction.response.send_message("Serving up your embed right now!", ephemeral=True)
         await interaction.channel.send(embed=emb)
     except ValueError:
         await interaction.response.send_message("Marvin had a little whoopsie moment. I couldn't quite recognise your RGB input")
@@ -533,10 +554,10 @@ async def on_ready():
     channel = client.get_channel(1045823574084169738)
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
-        goalreminder.start(),
-        regular_riddle.start(),
-        quote_of_the_day.start(),
-        checkupreminder.start()
+        # goalreminder.start(),
+        # regular_riddle.start(),
+        # quote_of_the_day.start(),
+        # checkupreminder.start()
     )
     await client.tree.sync()
 
@@ -681,7 +702,7 @@ async def checkupreminder():
 async def quote_of_the_day():
     quoteChannel = client.get_channel(1041717466633605130)
     response = requests.get("https://zenquotes.io/api/quotes/").json()
-    await quoteChannel.send(response[0]['q'] + ' | <@1125101346308247552>')
+    await quoteChannel.send(response[0]['q'] + ' | <@&1125101346308247552>')
     await client.get_user(623602247921565747).send(response[0]['q'])
 
 
