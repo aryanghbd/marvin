@@ -335,10 +335,10 @@ async def checkup(interaction, mood : app_commands.Choice[int]):
 # async def unpausesong(interaction):
 #     await interaction.response.send_message("Resuming the tunes")
 #     await mp.unpause()
-# @client.tree.command(name="skipsong", description="Skip!")
-# async def skip(interaction):
-#     await interaction.response.send_message("Skipping this song!")
-#     mp.skipSong()
+@client.tree.command(name="skipsong", description="Skip!")
+async def skip(interaction):
+    await interaction.response.send_message("Skipping this song!")
+    mp.skipSong()
 @client.tree.command(name= "checkupstats", description="Look back at how far you've come, generate a chart of your mood over time.")
 @app_commands.choices(time = [
     app_commands.Choice(name = 'Last 7 Days', value = 1),
@@ -516,15 +516,27 @@ async def deleteSoberJourney(interaction):
     await interaction.response.send_message("I cleared your journey from my database. Whatever your next journey is, I'll be there! <a:puckspin:1116178950956253264>")
     ##
 @client.tree.command(name = "postembed", description = "Staff feature to post embeds")
-async def postEmbed(interaction, colour : str, name : str, details : str):
+async def postEmbed(interaction, colour : str, details : str, name : str = None, thumbnail : str = None, image : str = None):
     trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930, 724261185310163045, 705099363499769897]
     if interaction.user.id not in trusted:
         interaction.response.send_message("Sorry, this command is for staff members only, git gud.")
     try:
         r, g, b = map(int, colour.split(','))
-        emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
-        emb.add_field(name="", value=details)
-        await interaction.response.send_message("Serving up your embed right now!", ephemeral = True)
+
+        if name is None:
+            emb = discord.Embed(title=" ", color=discord.Color.from_rgb(r, g, b))
+        else:
+            emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
+
+        if thumbnail:
+            emb.set_thumbnail(url = thumbnail)
+
+        if image:
+            emb.set_image(url = image)
+        paragraphs = details.split('@@')
+        # Join the paragraphs with line breaks to set as the embed's description
+        emb.description = "\n\n".join(paragraphs)
+        await interaction.response.send_message("Serving up your embed right now!", ephemeral=True)
         await interaction.channel.send(embed=emb)
     except ValueError:
         await interaction.response.send_message("Marvin had a little whoopsie moment. I couldn't quite recognise your RGB input")
@@ -536,10 +548,10 @@ async def on_ready():
     channel = client.get_channel(1045823574084169738)
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
-        goalreminder.start(),
-        regular_riddle.start(),
-        quote_of_the_day.start(),
-        checkupreminder.start()
+        # goalreminder.start(),
+        # regular_riddle.start(),
+        # quote_of_the_day.start(),
+        # checkupreminder.start()
     )
     await client.tree.sync()
 
