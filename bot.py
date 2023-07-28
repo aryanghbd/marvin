@@ -335,10 +335,10 @@ async def checkup(interaction, mood : app_commands.Choice[int]):
 # async def unpausesong(interaction):
 #     await interaction.response.send_message("Resuming the tunes")
 #     await mp.unpause()
-@client.tree.command(name="skipsong", description="Skip!")
-async def skip(interaction):
-    await interaction.response.send_message("Skipping this song!")
-    mp.skipSong()
+# @client.tree.command(name="skipsong", description="Skip!")
+# async def skip(interaction):
+#     await interaction.response.send_message("Skipping this song!")
+#     mp.skipSong()
 @client.tree.command(name= "checkupstats", description="Look back at how far you've come, generate a chart of your mood over time.")
 @app_commands.choices(time = [
     app_commands.Choice(name = 'Last 7 Days', value = 1),
@@ -529,10 +529,16 @@ async def postEmbed(interaction, colour : str, details : str, name : str = None,
             emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
 
         if thumbnail:
-            emb.set_thumbnail(url = thumbnail)
+            try:
+                emb.set_thumbnail(url = thumbnail)
+            except discord.app_commands.errors.CommandInvokeError:
+                interaction.response.send_message("Whoops! Looks like the url you provided was not well formed. Double check the link and try again")
 
         if image:
-            emb.set_image(url = image)
+            try:
+                emb.set_image(url = image)
+            except discord.app_commands.errors.CommandInvokeError:
+                interaction.response.send_message("Whoops! Looks like the url you provided was not well formed. Double check the link and try again")
         paragraphs = details.split('@@')
         # Join the paragraphs with line breaks to set as the embed's description
         emb.description = "\n\n".join(paragraphs)
@@ -696,7 +702,7 @@ async def checkupreminder():
 async def quote_of_the_day():
     quoteChannel = client.get_channel(1041717466633605130)
     response = requests.get("https://zenquotes.io/api/quotes/").json()
-    await quoteChannel.send(response[0]['q'] + ' | <@1125101346308247552>')
+    await quoteChannel.send(response[0]['q'] + ' | <@&1125101346308247552>')
     await client.get_user(623602247921565747).send(response[0]['q'])
 
 
