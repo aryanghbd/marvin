@@ -517,6 +517,9 @@ async def deleteSoberJourney(interaction):
     ##
 @client.tree.command(name = "postembed", description = "Staff feature to post embeds")
 async def postEmbed(interaction, colour : str, name : str, details : str):
+    trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930, 724261185310163045, 705099363499769897]
+    if interaction.user.id not in trusted:
+        interaction.response.send_message("Sorry, this command is for staff members only, git gud.")
     try:
         r, g, b = map(int, colour.split(','))
         emb = discord.Embed(title=name, color=discord.Color.from_rgb(r, g, b))
