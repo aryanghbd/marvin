@@ -392,6 +392,7 @@ async def report(interaction, reason : str, details: str):
     ticChannel = client.get_channel(1117079087928836127)
     await interaction.response.send_message("Thank you for submitting your report, let me pass this on to the mods, and they'll look into the matter for you.", ephemeral=True)
     await ticChannel.send(embed=em)
+    ##therapy
 @client.tree.command(name = "marvindraw", description="Marvin is a great artist, give him a prompt, and and turn your imagination into a picture!")
 async def dalle(interaction, question: str):
     await interaction.response.send_message("Coming right up!")
