@@ -36,9 +36,11 @@ db = cluster["UserData"]
 collection = db["SoberJournies"]
 moodCollection = db["Moods"]
 goalCollection = db["Goals"]
+assistantCollection = db["Assistant"]
 
 in_prog = False
 answer = ""
+trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930]
 
 ydl_opts = {
             'format': 'bestaudio',
@@ -137,6 +139,58 @@ async def goal_autocompletion(
         -Privacy to toggle displaying completion publicly or not.
         
 '''
+
+@client.tree.command(name="applyassistant", description="Interested in becoming an assistant on therapy corner?")
+async def applyassistant(interaction : discord.Interaction):
+
+    entry = {'_id' : interaction.user.id}
+
+    check = assistantCollection.find_one(entry)
+
+    if check:
+        await interaction.response.send_message("Sorry! It looks like you have already applied to this role! Please wait for a staff member to get back to you on your status", ephemeral = True)
+    else:
+        await interaction.response.send_message("Thank you for your interest! I'm going to DM you a quick application form", ephemeral = True)
+        applicant = await interaction.user.create_dm()
+
+        def check(m):
+            return m.channel == applicant and m.author.id == interaction.user.id
+
+        questions = [
+            "How old are you?",
+            "Are you comfortable with triggering topics?",
+            "This role will sometimes involve being pinged for assisting someone in need, are you able to remain active?",
+            "Are you aware of most mental disorders?",
+            "Are you at least a little familiar to the psychology field?",
+            "Can you give an example where you have helped someone deal with their mental struggles",
+            "How would you rate your ability to handle stress and anxiety?",
+            "Are you able to maintain a positive and helpful mood, remaining calm in most situations?",
+            "Would you consider your feelings being more important than the person you are and will be helping?",
+            "Do you know any methods to help people who have trauma?",
+            "Are you able to give unbiased support despite differing political and religious views?",
+            "How would you personally rate your activity and helpfulness on the server in your opinion?",
+            "Do you track mental health data and is it important to you?",
+            "Why would you like to be an assistant on this server?",
+        ]
+        responses = []
+
+        for q in questions:
+            await applicant.send(q)
+
+            response = await client.wait_for('message', check=check)
+            responses.append(response.content)
+            print(f"Response: {response.content}")
+
+        embed = discord.Embed(title="Assistant Application - User: " + interaction.user.name, color=discord.Color.blue())
+        for question, response in zip(questions, responses):
+            embed.add_field(name=question, value=response, inline=False)
+
+
+        ch = client.get_channel(1136039415421079613)
+        await ch.send(embed=embed)
+        await applicant.send("Thank you for your responses! I've sent your application to our staff team, who will get back to you soon on your application.")
+        assistantCollection.insert_one(entry)
+
 
 @client.tree.command(name="deletegoal", description="Changed your mind on a goal? You can delete it with this.")
 @app_commands.choices(privacy = [
