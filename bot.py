@@ -1,5 +1,6 @@
 import asyncio
 import random
+import re
 
 import discord
 from discord.ext import commands, tasks
@@ -23,6 +24,8 @@ import os
 from dotenv import load_dotenv
 import yt_dlp
 from musicplayer import MusicPlayer
+import games
+from discord.components import Button
 
 load_dotenv()
 
@@ -36,9 +39,14 @@ db = cluster["UserData"]
 collection = db["SoberJournies"]
 moodCollection = db["Moods"]
 goalCollection = db["Goals"]
+balances = db["Balance"]
 
+
+trusted = [229206808659492864, 922920299266179133, 706936739520053348, 1061788721973841930]
 in_prog = False
 answer = ""
+active_lobbies = {}
+active_games = {}
 
 ydl_opts = {
             'format': 'bestaudio',
@@ -159,28 +167,75 @@ async def deletegoal(interaction: discord.Interaction, item: str, privacy: app_c
     else:
         await interaction.response.send_message(f"Goal deleted. No worries, there's always another day!", ephemeral=True)
 
-@client.tree.command(name="completegoal", description="Finished up on a goal? Go ahead and tick it off the list!")
+@client.tree.command(name="completegoalnew", description="Finished up on a goal? Go ahead and tick it off the list!")
 @app_commands.choices(privacy = [
     app_commands.Choice(name = 'Public', value = 1),
     app_commands.Choice(name = 'Private', value = 2),
 ])
 @app_commands.autocomplete(item=goal_autocompletion)
-async def completegoal(interaction: discord.Interaction, item: str, privacy: app_commands.Choice[int]):
+async def completeGoal(interaction: discord.Interaction, item: str, privacy: app_commands.Choice[int]):
 
     user = goalCollection.find_one({"_id": interaction.user.id})
 
     goals = user.get('goals', [])
     for i, m in enumerate(goals):
         if m['goal'] == item:
-            # Found a mood document for today, remove it
+            # Found a goal document for today, remove it
             goalCollection.update_one({"_id": interaction.user.id}, {"$pull": {"goals": {"goal": item}}})
             break
 
-    if privacy.value == 1:
-        await interaction.response.send_message(f"Great job on finishing off your goal of {item} <a:pucksalute:1116178939002494976>. Everyone, go give <@{interaction.user.id}> a high five!")
-    else:
-        await interaction.response.send_message(f"Hey there, good job on finishing off on {item}, enjoy those endorphins from having accomplished something today!", ephemeral=True)
+    if interaction.user.id in trusted:
+        user = balances.find_one({"_id": interaction.user.id})
 
+        if user is None:
+            balances.insert_one({"_id": interaction.user.id, "balance": 200, "inventory": []})
+
+        else:
+            ## Check against balances last date and completion
+            date = user['goals']['lastMaxDate']
+            completed = user['goals']['goalsCompleted']
+            today = datetime.now().date()
+
+            if date != str(today):
+                ## Today we have not yet maxed out, if we have 2 completed, reset to 0
+                balance = user["balance"]
+                balances.update_one({"_id": interaction.user.id}, { "$set": {
+                                                                        "balance": balance + 250,
+                                                                        "goals.lastMaxDate": str(today),
+                                                                        "goals.goalsCompleted": 1
+                                                                    }})
+                if privacy.value == 1:
+                    await interaction.response.send_message(f"Great job on finishing off your goal of {item} <a:pucksalute:1116178939002494976>. For completing a daily goal, you have been given an extra 250 T-Coins! Everyone, go give <@{interaction.user.id}> a high five!")
+                else:
+                    await interaction.response.send_message(f"Hey there, good job on finishing off on {item}. For completing a daily goal, you have been given an extra 250 T-Coins! Enjoy those endorphins from having accomplished something today!",
+                        ephemeral=True)
+            else:
+                ## Today we have completed a goal, but we haven't hit max completions yet
+                if completed < 2:
+                    balance = user["balance"]
+                    balances.update_one({"_id": interaction.user.id}, {"$set": {
+                        "balance": balance + 250,
+                        "goals.lastMaxDate": str(today),
+                        "goals.goalsCompleted": 2
+                    }})
+                    if privacy.value == 1:
+                        await interaction.response.send_message(
+                            f"Great job on finishing off your goal of {item} <a:pucksalute:1116178939002494976>. This is your second and final rewardable daily goal completion, you have been given an extra 250 T-Coins! Everyone, go give <@{interaction.user.id}> a high five!")
+                    else:
+                        await interaction.response.send_message(
+                            f"Hey there shekel moment , good job on finishing off on {item}! This is your second and final rewardable daily goal completion, so I gave you an extra 250 T-Coins as a reward. Enjoy those endorphins from having accomplished something today!",
+                            ephemeral=True)
+
+                else:
+                    if privacy.value == 1:
+                        await interaction.response.send_message(
+                            f"Great job on finishing off your goal of {item} <a:pucksalute:1116178939002494976>. Everyone, go give <@{interaction.user.id}> a high five!")
+                    else:
+                        await interaction.response.send_message(
+                            f"Hey there, good job on finishing off on {item}, enjoy those endorphins from having accomplished something today!",
+                            ephemeral=True)
+    else:
+        await interaction.response.send_message("Staff feature only", ephemeral = True)
 @client.tree.command(name="setnewgoal", description="Feeling ambitious? Set a goal for a certain time!" )
 @app_commands.choices(privacy = [
     app_commands.Choice(name = 'Public', value = 1),
@@ -232,6 +287,63 @@ async def checkuphelp(interaction):
     -Separate role to sign up 
     ''', ephemeral=True)
 
+@client.tree.command(name = "checkupbeta", description="How are you feeling today? Let's check up on you.")
+@app_commands.choices(mood = [
+    app_commands.Choice(name = 'Great', value = 1),
+    app_commands.Choice(name = 'Good', value = 2),
+    app_commands.Choice(name = 'Neutral', value = 3),
+    app_commands.Choice(name = 'Bad', value = 4),
+    app_commands.Choice(name = 'Terrible', value = 5)
+])
+async def checkuptest(interaction, mood : app_commands.Choice[int]):
+
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("Staff only feature")
+    else:
+        today = str(datetime.now().date())
+        dailyMood = {"date": today, "mood": mood.name}
+
+        user = moodCollection.find_one({"_id": interaction.user.id})
+
+        if user is None:
+            # User not found, create a new document
+            moodCollection.insert_one({"_id": interaction.user.id, "moods": [dailyMood]})
+        else:
+            # User found, check if a mood document for today already exists
+            moods = user.get('moods', [])
+            rewarded = False
+            for i, m in enumerate(moods):
+                if m['date'] == today:
+                    # Found a mood document for today, remove it
+                    rewarded = True
+                    print("user already checked in today")
+                    moodCollection.update_one({"_id": interaction.user.id}, {"$pull": {"moods": {"date": today}}})
+                    break
+            # Whether the mood document for today existed or not, push the new one
+            if rewarded == False:
+                print("user hasn't been rewarded yet")
+                user = balances.find_one({"_id": interaction.user.id})
+
+                if user is None:
+                    balances.insert_one({"_id": interaction.user.id, "balance": 100, "inventory": []})
+                    await interaction.response.send_message(
+                        "Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>. To reward you for checking in, I have given you a 100 T-Coin gift!",
+                        ephemeral=True)
+
+                else:
+                    balance = user["balance"]
+                    balances.update_one({"_id": interaction.user.id}, {"$set": {"balance": balance + 100}})
+                    await interaction.response.send_message(
+                        "Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>. To reward you for checking in, I have given you a 100 T-Coin gift!",
+                        ephemeral=True)
+
+            else:
+                await interaction.response.send_message(
+                    "Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>. ",
+                    ephemeral=True)
+
+            moodCollection.update_one({"_id": interaction.user.id}, {"$push": {"moods": dailyMood}})
+
 @client.tree.command(name = "checkup", description="How are you feeling today? Let's check up on you.")
 @app_commands.choices(mood = [
     app_commands.Choice(name = 'Great', value = 1),
@@ -257,10 +369,187 @@ async def checkup(interaction, mood : app_commands.Choice[int]):
                 # Found a mood document for today, remove it
                 moodCollection.update_one({"_id": interaction.user.id}, {"$pull": {"moods": {"date": today}}})
                 break
-        # Whether the mood document for today existed or not, push the new one
+
+
+        await interaction.response.send_message(
+            "Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>. ",
+            ephemeral=True)
+
         moodCollection.update_one({"_id": interaction.user.id}, {"$push": {"moods": dailyMood}})
 
-    await interaction.response.send_message("Thank you for sharing how you felt today, if no one else has told you today, remember that you are loved <a:booheartgreen:1052184874552938536>", ephemeral=True)
+
+@client.tree.command(name="balance", description="Under development fam.")
+async def getBalance(interaction):
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("This feature is under development, sorry!")
+
+    else:
+        user = balances.find_one({"_id": interaction.user.id})
+
+        if user is None:
+            print("Couldn't find")
+            balances.insert_one({"_id": interaction.user.id, "balance": 0, "inventory": []})
+            em = discord.Embed(title=f"{interaction.user.name}'s Balance",
+                               color=discord.Color.from_rgb(255, 105, 180).from_rgb(30, 74, 213))
+            em.add_field(name="Balance:", value=0)
+            await interaction.response.send_message(embed=em)
+
+        else:
+            print("Found")
+            balance = user["balance"]
+            em = discord.Embed(title=f"{interaction.user.name}'s Balance",
+                               color=discord.Color.from_rgb(255, 105, 180).from_rgb(30, 74, 213))
+            em.add_field(name="Balance:", value=balance)
+            await interaction.response.send_message(embed=em)
+
+
+@client.tree.command(name="inventory", description = "Under development")
+async def getInventory(interaction):
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("Under development")
+
+    else:
+
+        user = balances.find_one({"_id": interaction.user.id})
+
+        if user is None:
+            balances.insert_one({"_id": interaction.user.id, "balance": 100, "inventory": []})
+            await interaction.response.send_message("Unfortunately, I couldn't find your balance in my databases! So I presume you are new, I will start off your account with a daily reward of 100 coins!")
+
+        else:
+            items = user['inventory']
+
+            embed = discord.Embed(title="Your Inventory", description="Here are your items:", color=0x00ff00)
+
+            for item in user['inventory']:
+                embed.add_field(name=item, value="----------", inline=False)
+            await interaction.response.send_message(embed=embed)
+
+
+@app_commands.checks.cooldown(1, 10)
+@app_commands.choices(privacy = [
+    app_commands.Choice(name = 'Share your name with the receiver', value = 1),
+    app_commands.Choice(name = 'Award the user anonymously', value = 2),
+])
+@client.tree.command(name="awarduser", description="Under development..")
+async def awardUser(interaction, user : str, reason: str, privacy : app_commands.Choice[int]):
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("Staff only feature", ephemeral = True)
+
+    else:
+        match = re.match(r'<@!?(\d+)>', user)
+        if match:
+            user = match.group(1)
+            user = await client.fetch_user(user)
+            try:
+                if privacy.value == 1:
+                    await user.send(f"Hey <@{user.id}>! <@{interaction.user.id}> wanted to give you an award of 2000 T-Coins! Their reason behind it was: {reason}. Thank you for being such a helpful member on Therapy Corner!")
+
+                else:
+                    await user.send(f"Hey <@{user.id}>! An anonymous user wanted to give you an award of 2000 T-Coins! Their reason behind it was: {reason}. Thank you for being such a helpful member on Therapy Corner!")
+                comms = client.get_channel(1045823574084169738)
+                await comms.send(f"Wow, <@{user.id}> just got given a weekly server award of 2000 coins for being helpful to someone!")
+                userbalance = balances.find_one({"_id": interaction.user.id})
+
+                balance = userbalance["balance"]
+
+                if userbalance is None:
+                    balances.insert_one({"_id": user.id, "balance": balance + 2000, "inventory": []})
+                else:
+                    balance = userbalance["balance"]
+                    balances.update_one({"_id": user.id}, {"$set": {"balance": balance + 2000}})
+
+                await interaction.response.send_message("Thank you for your kind gift, I've sent it to the recipient now, I am sure they will love it!", ephemeral=True)
+
+            except Exception as e:
+                print(e)
+                await interaction.response.send_message("User does not exist or is not in the server.", ephemeral=True)
+
+        else:
+            await interaction.response.send_message("Invalid user formatting, please @ the appropriate user in the first field.", ephmeral=True)
+
+@awardUser.error
+async def onCooldown(interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(str(error), ephemeral=True)
+@app_commands.checks.cooldown(1, 10)
+@client.tree.command(name="getdailycoins", description="Under development..")
+async def getCoins(interaction):
+    if interaction.user.id not in trusted:
+        await interaction.response.send_message("Under development")
+
+    else:
+        user = balances.find_one({"_id": interaction.user.id})
+
+        if user is None:
+            balances.insert_one({"_id": interaction.user.id, "balance": 100, "inventory": []})
+            await interaction.response.send_message("Unfortunately, I couldn't find your balance in my databases! So I presume you are new, I will start off your account with a daily reward of 100 coins!")
+
+        else:
+
+            ## At this point we need to branch again to evaluate existing sober journies.
+            ## For users that have used this command, we check their existing Sober Journey, we add a scaling reward using a mathematical
+            ## algo
+
+            ## First week sober: 50 * no days
+            ## Second week sober: 20 * no days
+            ## Third week sober and onwards: 10 * number of days
+
+            bonus = 0
+
+            try:
+                entry = collection.find_one({"_id": interaction.user.id})
+                journey = entry.get("_journey")
+                journeyStart = entry.get("_since")
+
+                diff = (datetime.now() - journeyStart)
+                total_days = diff.days
+
+
+                if 0 < total_days <= 7:
+                    bonus = total_days * 50
+                elif 8 <= total_days < 15:
+                    bonus = total_days * 20
+                else:
+                    bonus = total_days * 50
+
+                balance = user["balance"]
+                inventory = user["inventory"]
+                balance = balance + 100 + bonus
+
+
+                balances.update_one({"_id": interaction.user.id}, {"$set": {"balance": balance}})
+                await interaction.response.send_message(f"Congrats for claiming your daily coins again. As an additional reward for staying sober for {total_days} days, you have an additional bonus of {bonus}, giving you {bonus + 100} total today! I'm proud of you, go buy yourself something nice.")
+
+            except Exception as e:
+                print("Couldn't find a sober journey, no additional bonus added")
+                balance = user["balance"]
+                balance = balance + 100
+                new_values = {"$set": {"balance": balance}}
+                balances.update_one({"_id": interaction.user.id}, new_values)
+                await interaction.response.send_message("Congrats for claiming your daily 100 coins again. Remember, you can get additional rewards daily for staying sober on your sober journey, give it your best shot and get rewarded from the process!")
+
+@getCoins.error
+async def onCooldown(interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(str(error), ephemeral=True)
+
+@client.tree.command(name="lefunnyquiz", description="Under development")
+async def startQuiz(interaction, topic : str):
+    if interaction.user.id not in trusted:
+        interaction.response.send_message("Feature for staff only")
+
+    else:
+        # curr = games.Game(interaction, client)
+        # await curr.start("test")
+        # active_games[curr.gameID] = curr
+        # print(active_games)
+
+        curr = games.Quiz(interaction, client)
+        await curr.setup("Quiz", "Topic: Minecraft")
+        active_lobbies[curr.gameID] = curr
+        print(active_lobbies)
+
 
 
 @client.tree.command(name="marvinmoodtunes", description="How are you feeling? Tell Marvin, and he'll spin you some songs to help you through it")
@@ -585,7 +874,65 @@ async def on_raw_reaction_remove(payload):
 @client.event
 async def on_raw_reaction_add(payload):
 
-    print(payload.message_id)
+    if str(payload.emoji) == "🎮" and payload.message_id in active_lobbies and payload.member.id != 1121456578529349814:
+        game = games.findGameByID(payload.message_id, active_lobbies)
+        lobbyChannel = client.get_channel(1045823574084169738)
+        lobby = await lobbyChannel.fetch_message(payload.message_id)
+
+        if payload.member.id == game.host:
+            await payload.member.send("You are hosting the game and do not need to react")
+            await lobby.remove_reaction(payload.emoji, payload.member)
+        else:
+            print("someone joined")
+            await game.addPlayer(payload.member.id, lobby)
+
+    if str(payload.emoji) == "▶️" and payload.message_id in active_lobbies and payload.member.id != 1121456578529349814:
+        game = games.findGameByID(payload.message_id, active_lobbies)
+        lobbyChannel = client.get_channel(1045823574084169738)
+        lobby = await lobbyChannel.fetch_message(payload.message_id)
+
+        if payload.member.id != game.host:
+            await payload.member.send("Only the host can start the game")
+            await lobby.remove_reaction(payload.emoji, payload.member)
+        else:
+            print("game started")
+            gameArea, questions = await game.start_game_countdown(lobbyChannel)
+            active_games[game.gameID] = gameArea.id
+            print(active_games)
+            await game.startQuiz(lobbyChannel, gameArea, questions)
+
+
+    # if payload.message_id in active_games.values():
+    #     print("i found something")
+    #     lobbyChannel = client.get_channel(1045823574084169738)
+    #     area = await lobbyChannel.fetch_message(payload.message_id)
+    #     for reaction in area.reactions:
+    #         async for user in reaction.users():
+    #             if user.id == payload.member.id and user.id != client.user.id:
+    #                 await user.send("You have already selected an answer, please unselect it and choose a different one")
+    #                 await area.remove_reaction(reaction.emoji, user)
+    #                 break
+
+    ventChannels = [1045823574084169738]
+    if payload.channel_id in ventChannels and str(payload.emoji) == "<:starblue_1:1051879401542922290>":
+        channel = client.get_channel(payload.channel_id)
+        msg = await channel.fetch_message(payload.message_id)
+        reaction = get(msg.reactions, emoji=payload.emoji)
+
+        if reaction.count >= 2:
+            ## We have hit the required threshold for upvotes
+            ## Find the user, and their balance if it exists.
+            user = balances.find_one({"_id": msg.author.id})
+
+            if user is None:
+                balances.insert_one({"_id": msg.author.id, "balance": 1000, "inventory": []})
+                await msg.author.send(f"Hey there, <@{msg.author.id}>! Thank you for being so helpful in the vent channels recently, people appeared to really like what you had to say, and after receiving enough upvotes you have been given a 1000 T-Coin reward!")
+
+            else:
+                balance = user["balance"]
+                balances.update_one({"_id": msg.author.id}, {"$set": {"balance": balance + 1000}})
+                await msg.author.send(f"Hey there, <@{msg.author.id}>! Thank you for being so helpful in the vent channels recently, people appeared to really like what you had to say, and after receiving enough upvotes you have been given a 1000 T-Coin reward!")
+
     channel = client.get_channel(1121336331675631687)
     if payload.message_id == 1121504128435232789 and payload.member.id != 1121456578529349814:
         msg = await channel.fetch_message(payload.message_id)
