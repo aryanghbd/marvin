@@ -509,9 +509,9 @@ async def askgpt (interaction, question : str):
 
 
 
-@client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
-async def riddleanswer(interaction):
-    await interaction.response.send_message("That one was a tough one! I'll give you the answer this time, its: " + answer + ". Better luck on the next riddle!")
+# @client.tree.command(name = "revealriddleanswer", description = "Reveal the answer to the Riddle") #Add the guild ids in which the slash command will appear. If it should be in all, remove the argument, but note that it will take some time (up to an hour) to register the command if it's for all guilds.
+# async def riddleanswer(interaction):
+#     await interaction.response.send_message("That one was a tough one! I'll give you the answer this time, its: " + answer + ". Better luck on the next riddle!")
 
 @client.tree.command(name = "startsoberjourney", description = "Every journey begins with a single step")
 async def startSoberJourney(interaction, journey : str):
@@ -618,8 +618,8 @@ async def on_ready():
     await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=" you with /help"))
     await asyncio.gather(
         goalreminder.start(),
-        regular_riddle.start(),
-        quote_of_the_day.start(),
+        # regular_riddle.start(),
+        # quote_of_the_day.start(),
         checkupreminder.start()
     )
     await client.tree.sync()
