@@ -620,9 +620,10 @@ async def on_ready():
         goalreminder.start(),
         # regular_riddle.start(),
         # quote_of_the_day.start(),
-        checkupreminder.start()
+        checkupreminder.start(),
+        client.tree.sync()
     )
-    await client.tree.sync()
+    # await client.tree.sync()
 
 
 @client.event
@@ -658,12 +659,17 @@ async def on_raw_reaction_add(payload):
         purplerole = discord.utils.find(lambda r: r.name == 'Purple', payload.member.guild.roles)
         deeppinkrole = discord.utils.find(lambda r: r.name == 'Deep Pink', payload.member.guild.roles)
         blackrole = discord.utils.find(lambda r: r.name == 'Black', payload.member.guild.roles)
-
+        boosterRole = discord.utils.find(lambda r: r.name == 'Server Booster', payload.member.guild.roles)
         colourRoles = [yellowrole, limerole, cyanrole, purplerole, deeppinkrole, blackrole]
 
         for role in colourRoles:
             if role in payload.member.roles:
                 await payload.member.send(f"Hey there, <@{payload.member.id}>! As much as I appreciate your desire to become the human embodiment of a rainbow, I'm afraid you can only hold on to one coloured role at a time! Please remove your current role before adding a new one.")
+                await msg.remove_reaction(payload.emoji, payload.member)
+                return
+
+            elif boosterRole not in payload.member.roles:
+                await payload.member.send(f"Sorry! Only server boosters can select a unique colour role. If you're enjoying your time on Therapy Corner, consider boosting the server to unlock cool new perks like these!")
                 await msg.remove_reaction(payload.emoji, payload.member)
                 return
 
